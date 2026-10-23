@@ -1,0 +1,69 @@
+# Java and Spring Boot build output
+*.class
+*.jar
+*.war
+*.ear
+target/
+build/
+out/
+.gradle/
+.kotlin/
+
+# Keep Maven and Gradle wrappers versioned
+!.mvn/wrapper/maven-wrapper.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE and editor configuration
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+.apt_generated/
+.sts4-cache/
+nbproject/private/
+bin/
+*.swp
+*.swo
+*~
+
+# Logs, JVM diagnostics, and coverage output
+logs/
+*.log
+*.hprof
+hs_err_pid*
+replay_pid*
+.jacoco/
+*.exec
+coverage/
+
+# Local environment, credentials, and private keys
+.env
+.env.*
+!.env.example
+!.env.*.example
+.aws/
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+application-local.properties
+application-local.yml
+application-local.yaml
+
+# Local database files
+*.mv.db
+*.trace.db
+*.h2.db
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
