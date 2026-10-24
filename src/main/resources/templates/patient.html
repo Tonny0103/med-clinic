@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title th:text="${p.name + ' · Med Clinic'}"></title><link rel="stylesheet" href="/style.css"></head>
+<body><header th:replace="~{fragments :: header}"></header><main id="conteudo"><a href="/pacientes">← Buscar pacientes</a>
+<div class="success" role="status" th:if="${param.sucesso}">Operação registrada com sucesso.</div>
+<div class="alert" role="alert" tabindex="-1" th:if="${message != null}" th:text="${message}"></div>
+<div class="alert" th:if="${!originalChart.isEmpty()}" th:text="${'Prontuário de origem ' + originalChart + ' mesclado. Esta é a ficha consolidada.'}"></div>
+<p class="eyebrow" th:text="${'PRONTUÁRIO ' + p.chart}"></p><h1 th:text="${p.name}"></h1><span class="badge" th:text="${p.status}"></span>
+<section class="card"><h2>Dados administrativos</h2><dl>
+<dt>Nascimento</dt><dd th:text="${p.birthdate}"></dd><dt>Sexo informado</dt><dd th:text="${p.sex}"></dd><dt>Nacionalidade</dt><dd th:text="${p.nationality}"></dd><dt>CPF</dt><dd th:text="${p.cpf.isEmpty() ? 'Sem CPF' : p.cpf}"></dd><dt>Documento alternativo</dt><dd th:text="${p.alternativeType + ' ' + p.alternativeNumber + ' · ' + p.alternativeCountry + ' · ' + p.alternativeIssuer}"></dd><dt>Telefone</dt><dd th:text="${p.phone}"></dd><dt>E-mail</dt><dd th:text="${p.email.isEmpty() ? 'Não informado' : p.email}"></dd><dt>Endereço</dt><dd th:text="${p.address + ' · ' + p.country}"></dd>
+</dl></section>
+<section class="card" th:if="${actor.canWrite()}"><h2>Manutenção</h2><a class="button" th:if="${p.status == 'ATIVO'}" th:href="@{/pacientes/{id}/editar(id=${p.id})}">Editar cadastro</a>
+<details><summary th:text="${p.status == 'ATIVO' ? 'Inativar cadastro' : 'Reativar cadastro'}"></summary><p>O prontuário, documentos e vínculos serão preservados.</p>
+<form th:action="@{/pacientes/{id}/situacao(id=${p.id})}" method="post"><th:block th:replace="~{fragments :: command}"></th:block><input type="hidden" name="target" th:value="${p.status == 'ATIVO' ? 'INATIVO' : 'ATIVO'}">
+<label for="statusReason">Motivo (sem dados de documento ou contato) *</label><input id="statusReason" name="reason" maxlength="500" required><button th:text="${p.status == 'ATIVO' ? 'Confirmar inativação' : 'Confirmar reativação'}"></button></form></details></section>
+<section th:replace="~{relationships :: relationships}"></section>
+<!-- consents -->
+<section th:replace="~{attachments :: attachments}"></section>
+<section class="card"><h2>Histórico de atendimentos</h2><div th:switch="${history.state().name()}">
+<p th:case="'NAO_CONFIGURADO'">Histórico ainda não disponível</p><p th:case="'VAZIO'">Nenhum atendimento encontrado</p><p role="alert" th:case="'FALHA'">Não foi possível consultar o histórico. Tente novamente.</p>
+<div th:case="'DISPONIVEL'" class="table-scroll"><table><thead><tr><th>Data</th><th>Profissional</th><th>Tipo</th></tr></thead><tbody><tr th:each="entry : ${history.entries()}"><td th:text="${entry.date()}"></td><td th:text="${entry.professional()}"></td><td th:text="${entry.type()}"></td></tr></tbody></table></div></div><p class="muted">Somente resumos administrativos. Conteúdo clínico não é disponibilizado aqui.</p></section>
+</main></body></html>

@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><body>
+<header th:fragment="header"><a class="skip" href="#conteudo">Pular para o conteúdo</a><a class="brand" href="/pacientes">Med Clinic</a><nav aria-label="Principal"><a href="/pacientes">Pacientes</a><a th:if="${actor.isManager()}" href="/mesclagem">Mesclar</a><a th:if="${actor.isManager()}" href="/auditoria">Auditoria</a></nav><span th:text="${actor.username() + ' · ' + actor.role()}"></span><form th:action="@{/logout}" method="post"><button>Sair</button></form></header>
+<div th:fragment="field(key, label, type, required)">
+<label th:for="${key}" th:text="${label + (required ? ' *' : '')}"></label>
+<input th:id="${key}" th:name="${key}" th:type="${type}" th:value="${form.get(key)}" th:required="${required}" th:attr="aria-invalid=${errors.containsKey(key)},aria-describedby=${errors.containsKey(key) ? key + '-error' : null}">
+<p class="field-error" th:if="${errors.containsKey(key)}" th:id="${key + '-error'}" th:text="${errors.get(key)}"></p>
+</div>
+<th:block th:fragment="command"><input type="hidden" name="version" th:value="${p.version}"><input type="hidden" name="token" th:value="${token}"></th:block>
+</body></html>
