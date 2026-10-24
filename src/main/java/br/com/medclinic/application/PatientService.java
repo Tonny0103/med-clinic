@@ -27,6 +27,100 @@ public class PatientService {
         return LocalDate.now(clock);
     }
 
+    public UUID create(Actor actor, UUID token, Map<String, String> form) {
+        authorize(actor, actor.canWrite(), "CRIAR", null);
+        String fingerprint = fingerprint(form);
+        try {
+            return store.transaction(() -> {
+                var previous = store.receipt(actor.username(), token);
+                if (previous.isPresent()) {
+                    var receipt = previous.get();
+                    require(
+                            "token",
+                            receipt.operation().equals("CRIAR")
+                                    && receipt.fingerprint().equals(fingerprint),
+                            "Submissão reutilizada com dados diferentes.");
+                    return receipt.patientId();
+                }
+                Patient p = new Patient();
+                applyProfile(p, form);
+                if (!value(form, "guardianName").isBlank()
+                        || !value(form, "guardianDocument").isBlank()
+                        || !value(form, "guardianPhone").isBlank()) {
+                    p.guardians.add(new Patient.Guardian(
+                            UUID.randomUUID(),
+                            p.id,
+                            value(form, "guardianName"),
+                            value(form, "guardianRelationship"),
+                            value(form, "guardianDocument"),
+                            value(form, "guardianPhone"),
+                            today(),
+                            null));
+                }
+                br.com.medclinic.domain.Rules.validate(p, today());
+                checkSuspicion(p, value(form, "reason"));
+                p.chart = store.nextChart();
+                store.save(p, -1);
+                event(actor, "CRIAR", p.id, "SUCESSO", auditFields(form), value(form, "reason"), "");
+                store.receipt(actor.username(), token, new ClinicStore.Receipt("CRIAR", fingerprint, p.id));
+                return p.id;
+            });
+        } catch (RuleViolation exception) {
+            event(actor, "CRIAR", null, "RECUSADO", "", "", "");
+            throw exception;
+        }
+    }
+
+    public void requireWriter(Actor actor, String operation, UUID id) {
+        authorize(actor, actor.canWrite(), operation, id);
+    }
+
+    public PatientView read(Actor actor, UUID id) {
+        authorize(actor, actor.canRead(), "CONSULTAR", id);
+        return store.transaction(() -> {
+            Patient requested =
+                    store.find(id).orElseThrow(() -> new RuleViolation("patient", "Paciente não encontrado."));
+            Patient p = canonical(id);
+            event(actor, "CONSULTAR", p.id, "SUCESSO", "", "", id.equals(p.id) ? "" : id.toString());
+            return new PatientView(p, id.equals(p.id) ? "" : requested.chart);
+        });
+    }
+
+    public record PatientView(Patient patient, String originalChart) {}
+
+    protected void applyProfile(Patient p, Map<String, String> f) {
+        p.name = value(f, "name");
+        p.birthdate = date(f, "birthdate");
+        p.sex = value(f, "sex");
+        p.nationality = value(f, "nationality").toUpperCase(java.util.Locale.ROOT);
+        p.cpf = value(f, "cpf");
+        p.alternativeType = value(f, "alternativeType");
+        p.alternativeNumber = value(f, "alternativeNumber");
+        p.alternativeCountry = value(f, "alternativeCountry");
+        p.alternativeIssuer = value(f, "alternativeIssuer");
+        p.alternativeReason = value(f, "alternativeReason");
+        p.phone = value(f, "phone");
+        p.email = value(f, "email");
+        p.address = value(f, "address");
+        p.country = value(f, "country");
+    }
+
+    protected void checkSuspicion(Patient p, String reason) {
+        var suspects = store.all().stream()
+                .filter(other -> !other.id.equals(p.id) && other.mergedInto == null)
+                .filter(other ->
+                        br.com.medclinic.domain.Rules.suspicious(p.name, p.birthdate, other.name, other.birthdate))
+                .limit(20)
+                .map(other -> other.name + " · " + other.birthdate + " · prontuário " + other.chart)
+                .toList();
+        require(
+                "reason",
+                suspects.isEmpty() || !reason.isBlank(),
+                "Revise possível duplicidade: " + String.join("; ", suspects)
+                        + ". Documentos distintos permitem continuar com justificativa.");
+        require("reason", reason.length() <= 500, "A justificativa deve ter até 500 caracteres.");
+    }
+
     protected void authorize(Actor actor, boolean permitted, String operation, UUID patientId) {
         if (!permitted) {
             event(actor, operation, patientId, "NEGADO", "", "", "");

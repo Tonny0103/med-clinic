@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title th:text="${editing ? 'Editar paciente · Med Clinic' : 'Novo paciente · Med Clinic'}"></title><link rel="stylesheet" href="/style.css"></head>
+<body><header th:replace="~{fragments :: header}"></header><main id="conteudo">
+<a href="/pacientes">← Pacientes</a><h1 th:text="${editing ? 'Editar cadastro' : 'Novo paciente'}"></h1><p>Campos com * são obrigatórios. Use somente dados fictícios nesta demonstração.</p>
+<div class="alert" role="alert" tabindex="-1" th:if="${!errors.isEmpty()}"><strong>Revise os dados antes de salvar.</strong><ul><li th:each="error : ${errors}"><a th:href="${'#' + error.key}" th:text="${error.value}"></a></li></ul></div>
+<form th:action="${editing ? '/pacientes/' + patientId + '/editar' : '/pacientes'}" method="post" class="panel">
+<input type="hidden" name="token" th:value="${form['token'] ?: token}"><input th:if="${editing}" type="hidden" name="version" th:value="${form['version']}">
+<section class="card"><h2>Identificação</h2><div class="grid">
+<div th:replace="~{fragments :: field('name', 'Nome completo', 'text', true)}"></div>
+<div th:replace="~{fragments :: field('birthdate', 'Nascimento', 'date', true)}"></div>
+<div><label for="sex">Sexo informado *</label><select id="sex" name="sex" required><option th:each="s : ${ {'NAO_INFORMADO','FEMININO','MASCULINO','OUTRO'} }" th:value="${s}" th:text="${s == 'NAO_INFORMADO' ? 'Não informado' : s}" th:selected="${form['sex'] == s}"></option></select></div>
+<div th:replace="~{fragments :: field('nationality', 'Nacionalidade (BR, AR, etc.)', 'text', true)}"></div>
+<div th:replace="~{fragments :: field('cpf', 'CPF', 'text', false)}"></div>
+</div><details th:open="${form['alternativeNumber'] != null and !form['alternativeNumber'].isEmpty()}"><summary>Documento alternativo para menor ou estrangeiro sem CPF</summary><div class="grid">
+<div th:replace="~{fragments :: field('alternativeType', 'Tipo de documento', 'text', false)}"></div>
+<div th:replace="~{fragments :: field('alternativeNumber', 'Número do documento', 'text', false)}"></div>
+<div th:replace="~{fragments :: field('alternativeCountry', 'País do documento', 'text', false)}"></div>
+<div th:replace="~{fragments :: field('alternativeIssuer', 'Emissor', 'text', false)}"></div>
+<div th:replace="~{fragments :: field('alternativeReason', 'Motivo de não ter CPF', 'text', false)}"></div>
+</div></details></section>
+<section class="card"><h2>Contato</h2><div class="grid">
+<div th:replace="~{fragments :: field('phone', 'Telefone', 'tel', true)}"></div>
+<div th:replace="~{fragments :: field('email', 'E-mail (opcional)', 'email', false)}"></div>
+<div th:replace="~{fragments :: field('address', 'Endereço completo', 'text', true)}"></div>
+<div th:replace="~{fragments :: field('country', 'País do endereço', 'text', true)}"></div>
+</div></section>
+<section class="card" th:if="${!editing}"><h2>Responsável legal</h2><p>Obrigatório para menor de 18 anos; não é substituído por contato de emergência.</p><div class="grid">
+<div th:replace="~{fragments :: field('guardianName', 'Nome do responsável', 'text', false)}"></div>
+<div th:replace="~{fragments :: field('guardianRelationship', 'Vínculo', 'text', false)}"></div>
+<div th:replace="~{fragments :: field('guardianDocument', 'Documento do responsável', 'text', false)}"></div>
+<div th:replace="~{fragments :: field('guardianPhone', 'Telefone do responsável', 'tel', false)}"></div>
+</div></section>
+<section class="card"><h2>Revisão</h2><p>Se houver alerta de possível duplicidade, confira os cadastros e justifique por que são pessoas distintas. Na correção de documento existente, informe motivo e prova administrativa válida.</p>
+<div th:replace="~{fragments :: field('reason', 'Justificativa (sem CPF ou dados de contato)', 'text', false)}"></div>
+<div th:if="${editing}"><div th:replace="~{fragments :: field('evidenceId', 'ID da prova administrativa, se corrigir documento', 'text', false)}"></div></div>
+</section><div class="actions"><button>Salvar cadastro</button><a href="/pacientes">Cancelar</a></div></form></main></body></html>

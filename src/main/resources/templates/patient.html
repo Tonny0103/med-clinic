@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title th:text="${p.name + ' · Med Clinic'}"></title><link rel="stylesheet" href="/style.css"></head>
+<body><header th:replace="~{fragments :: header}"></header><main id="conteudo"><a href="/pacientes">← Buscar pacientes</a>
+<div class="success" role="status" th:if="${param.sucesso}">Operação registrada com sucesso.</div>
+<div class="alert" th:if="${!originalChart.isEmpty()}" th:text="${'Prontuário de origem ' + originalChart + ' mesclado. Esta é a ficha consolidada.'}"></div>
+<p class="eyebrow" th:text="${'PRONTUÁRIO ' + p.chart}"></p><h1 th:text="${p.name}"></h1><span class="badge" th:text="${p.status}"></span>
+<section class="card"><h2>Dados administrativos</h2><dl>
+<dt>Nascimento</dt><dd th:text="${p.birthdate}"></dd><dt>Sexo informado</dt><dd th:text="${p.sex}"></dd><dt>Nacionalidade</dt><dd th:text="${p.nationality}"></dd><dt>CPF</dt><dd th:text="${p.cpf.isEmpty() ? 'Sem CPF' : p.cpf}"></dd><dt>Documento alternativo</dt><dd th:text="${p.alternativeType + ' ' + p.alternativeNumber + ' · ' + p.alternativeCountry + ' · ' + p.alternativeIssuer}"></dd><dt>Telefone</dt><dd th:text="${p.phone}"></dd><dt>E-mail</dt><dd th:text="${p.email.isEmpty() ? 'Não informado' : p.email}"></dd><dt>Endereço</dt><dd th:text="${p.address + ' · ' + p.country}"></dd>
+</dl></section>
+<!-- maintenance -->
+<!-- relationships -->
+<!-- consents -->
+<!-- attachments -->
+<!-- history -->
+</main></body></html>

@@ -17,9 +17,79 @@ import org.springframework.test.context.DynamicPropertySource;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 class FoundationTest {
     @Autowired
+    org.springframework.test.web.servlet.MockMvc web;
+
+    @Test
+    void registrationPageRendersAndInvalidPostKeepsValues() throws Exception {
+        web.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/pacientes/novo")
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("recepcao")
+                                        .roles("RECEPCAO")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .string(org.hamcrest.Matchers.containsString("name=\"_csrf\"")));
+        web.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/pacientes")
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("recepcao")
+                                        .roles("RECEPCAO"))
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.csrf())
+                                .param("token", UUID.randomUUID().toString())
+                                .param("name", "Nome fictício preservado"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .is(422))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .string(org.hamcrest.Matchers.containsString("Nome fictício preservado")));
+    }
+
+    @Autowired
+    br.com.medclinic.application.PatientService patients;
+
+    @Autowired
     ClinicStore store;
+
+    @Test
+    void createsOnceAndRejectsDuplicateDocumentAndDoctorWrite() {
+        var reception = new br.com.medclinic.application.Actor("recepcao", "RECEPCAO");
+        var form = new java.util.HashMap<>(java.util.Map.of(
+                "name",
+                "Pessoa fictícia de cadastro",
+                "birthdate",
+                "1990-03-07",
+                "sex",
+                "NAO_INFORMADO",
+                "nationality",
+                "BR",
+                "cpf",
+                "00000000353",
+                "phone",
+                "+55 65 90000-0000",
+                "address",
+                "Rua fictícia, 1",
+                "country",
+                "BR"));
+        UUID token = UUID.randomUUID();
+        UUID id = patients.create(reception, token, form);
+        assertThat(patients.create(reception, token, form)).isEqualTo(id);
+        assertThat(store.find(id).orElseThrow().chart).hasSize(12);
+        assertThat(store.events().stream()
+                        .filter(e -> e.operation().equals("CRIAR")
+                                && id.equals(e.patientId())
+                                && e.outcome().equals("SUCESSO")))
+                .hasSize(1);
+        assertThatThrownBy(() -> patients.create(reception, UUID.randomUUID(), form))
+                .isInstanceOf(RuleViolation.class);
+        form.put("cpf", "00000000434");
+        assertThatThrownBy(() -> patients.create(
+                        new br.com.medclinic.application.Actor("medico", "MEDICO"), UUID.randomUUID(), form))
+                .isInstanceOf(br.com.medclinic.application.AccessDenied.class);
+    }
 
     @DynamicPropertySource
     static void passwords(DynamicPropertyRegistry registry) {

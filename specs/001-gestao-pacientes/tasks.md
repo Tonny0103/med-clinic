@@ -6,7 +6,7 @@ Escopo decidido pelo usuário em 2026-10-24: manter as oito histórias, implanta
 - [X] T002 Criar projeto Java/Spring Boot/Thymeleaf, Maven Wrapper, configuração local/teste, formatação e README com comandos.
 - [X] T003 Escrever testes essenciais e implementar regras puras de identidade, suspeita de duplicidade e vigência de convênios em domain.
 - [X] T004 Implementar portas, persistência transacional, versões, idempotência, autenticação por três perfis e auditoria interna.
-- [ ] T005 [US1] Implementar formulário e cadastro com prontuário imutável, CPF/documento único, responsável de menor e justificativa de suspeita.
+- [X] T005 [US1] Implementar formulário e cadastro com prontuário imutável, CPF/documento único, responsável de menor e justificativa de suspeita.
 - [ ] T006 [US2] Implementar busca paginada, ficha administrativa, aliases e histórico não disponível, com leitura auditada.
 - [ ] T007 [US3] Implementar edição com conflito, correção documental, inativação e reativação com motivo.
 - [ ] T008 [US4] Implementar responsáveis históricos, emergência, múltiplos convênios, preferência atual e consulta histórica por data.
