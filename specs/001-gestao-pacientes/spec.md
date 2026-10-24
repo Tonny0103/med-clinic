@@ -6,7 +6,7 @@
 
 **Created**: 2026-10-23
 
-**Status**: Draft — aprovação de produto ainda não registrada.
+**Status**: Pronto para implementação do MVP demonstrativo; escopo simplificado pelo usuário em 2026-10-24.
 
 **Input**: Cadastro administrativo único para recepção, com identificação, contatos, responsáveis, convênios, busca, prevenção e mesclagem de duplicidades, documentos, resumo de atendimentos, consentimentos, inativação, reativação e auditoria. Proteção de dados pessoais e sensíveis e acesso por perfil.
 
@@ -263,14 +263,14 @@ Como gerente, quero saber quem criou, alterou e consultou cadastros sem expor co
 
 ### Measurable Outcomes
 
-- **SC-001**: Em 1.000 buscas representativas por nome, CPF e prontuário, entre dez usuários simultâneos numa base fictícia de 10.000 pacientes, todos os resultados ou estados vazios ficam visíveis em até 2 segundos da submissão à exibição. Incluir páginas posteriores, homônimos, inativos e mesclados; erros contam como falhas.
+- **SC-001**: Demonstrar busca por nome, CPF e prontuário em dezenas de pacientes fictícios, com resultado ou estado vazio compreensível e paginação de até 20. Conferir a resposta por navegação manual; não exigir teste de carga ou SLO para esta apresentação.
 - **SC-002**: Bloquear 100% das tentativas com CPF inválido ou de outra identidade, inclusive simultâneas e envolvendo inativos ou mesclados; nenhum prontuário é duplicado ou reutilizado. Bloquear também 100% das correções de CPF ou documento alternativo já registrado sem documento comprobatório ou motivo; correções autorizadas por secretária ou gerente devem preservar o prontuário e produzir auditoria com referência da comprovação.
 - **SC-003**: 100% das operações de FR-031 têm auditoria com quem, quando, ação e resultado; nenhuma alteração é confirmada nem leitura protegida liberada sem o evento exigido.
-- **SC-004**: Pelo menos nove de dez secretárias treinadas concluem cadastro completo e correto em até 4 minutos, sem ajuda, com dados e manifestações já disponíveis, incluindo telefone e endereço obrigatórios. E-mail não é necessário para considerar o cadastro completo. Incluir anexação de uma identidade e registro de decisões; excluir obtenção externa de documentos e consentimento.
+- **SC-004**: O roteiro de apresentação permite cadastrar paciente fictício com telefone, endereço, identidade e manifestação já disponíveis. E-mail continua opcional. Não exigir pesquisa com secretárias ou meta cronometrada.
 - **SC-005**: Em todos os cenários da matriz, bloquear ações proibidas sem exposição; nenhum perfil consegue ler ou baixar anexos clínicos neste módulo.
 - **SC-006**: Nas mesclagens de aceite, 100% dos documentos, resumos e decisões permanecem rastreáveis, ambos os números originais levam ao destino e nenhuma revogação é anulada. Bloquear 100% das tentativas sem evidência administrativa válida de qualquer dos cadastros, sem coincidência de nome completo e nascimento conforme FR-026 ou sem confirmação justificada do gerente; CPFs válidos divergentes continuam bloqueando. Mesclagens confirmadas preservam as referências das duas evidências no registro e na auditoria, sem copiar conteúdo documental. Falhas não deixam vínculos parcialmente movidos.
 - **SC-007**: Os roteiros de menor sem CPF, estrangeiro, múltiplos convênios, troca, vencimento, contato compartilhado, revogação, busca vazia, conflito de edição e retorno com reativação alcançam os resultados previstos sem cadastro duplicado ou exclusão definitiva. Incluir consulta de convênio em data passada anterior ao seu encerramento posterior, apresentando a vigência e a validade daquela data sem alterar vínculo, preferência atual ou atendimentos anteriores. Incluir revogação de paciente inativo com nova evidência administrativa anexada exclusivamente nesse fluxo, mantendo o paciente inativo e bloqueada a anexação avulsa. Toda reativação autorizada preserva prontuário e vínculos, registra motivo e auditoria e devolve o paciente à busca padrão; origens mescladas permanecem sem reativação independente. Sem fonte de atendimentos na primeira entrega, todas as consultas ao histórico mostram «Histórico ainda não disponível», sem dados fictícios em produção ou lançamento manual; os estados de fonte vazia e falha devem ser verificáveis separadamente com fonte controlada de teste.
-- **SC-008**: Nenhuma violação aplicável de WCAG 2.1 A ou AA permanece nas jornadas após verificação automatizada e avaliação manual com teclado e leitor de tela; registrar evidências na revisão.
+- **SC-008**: Conferir labels, semântica, mensagens textuais, foco visível e navegação por teclado nas telas essenciais, sem exigir certificação ou laudo formal de acessibilidade.
 - **SC-009**: Bloquear 100% das tentativas de criação ou edição cadastral sem telefone ou sem endereço, identificando os campos faltantes e preservando os demais valores; permitir 100% dos cenários válidos sem e-mail quando todos os obrigatórios estiverem atendidos.
 
 ## Assumptions
@@ -281,8 +281,8 @@ Como gerente, quero saber quem criou, alterou e consultou cadastros sem expor co
 - **AS-004 — Perfis**: Gerente acumula permissões administrativas da secretária. Identidade de usuário e perfis são dependências obrigatórias antes da liberação; criação de contas e administração de perfis não integram este módulo.
 - **AS-005 — Dependências**: A primeira entrega não depende de implementar agenda ou atendimento para liberar o cadastro. Enquanto não existir módulo fornecedor, o histórico mostra «Histórico ainda não disponível», sem lançamento manual ou dados fictícios em produção. Dados fictícios controlados ficam restritos à verificação dos futuros estados de consulta e preservação de associações; a consulta real dependerá da fonte de resumos administrativos quando existir. Agenda e agendamento, check-in, faturamento/TISS, financeiro, prontuário clínico, telemedicina e portal permanecem fora; esta entrega fornece situação de convênio e preserva associações e resumos disponíveis.
 - **AS-006 — Arquivos e datas**: PDF/JPEG/PNG e 10 MiB são limites iniciais de produto. Nascimento, maioridade e validade seguem data local da clínica. O envio clínico não habilita inspeção pela recepção; leitura futura exige escopo e autorização próprios.
-- **AS-007 — Verificação**: Base de 10.000 pacientes, dez usuários simultâneos e cadastro em 4 minutos são premissas iniciais mensuráveis. O plano deve detalhar carga e condições representativas, preservando as metas ou registrando revisão aprovada. Cobertura e processo de testes seguem a constituição 1.0.0.
-- **AS-008 — Governança**: Esta especificação não registra aprovação de produto nem substitui aprovação do plano antes de código ou testes. Políticas de tratamento e retenção e textos dos termos devem estar definidos antes de dados reais. Restrições clínicas valem também em auditoria, invalidação e mesclagem.
+- **AS-007 — Verificação**: MVP para apresentação, com dezenas de pacientes fictícios, poucos usuários e poucos testes essenciais. Seguir a constituição 2.0.0, sem cobertura percentual ou carga obrigatória.
+- **AS-008 — Governança**: A instrução do usuário autoriza implementar as oito histórias com estrutura simplificada, sem aprovações por papel. Políticas e termos para dados reais ficam fora da apresentação; as restrições clínicas continuam valendo na auditoria, invalidação e mesclagem.
 
 ## Clarifications
 
@@ -302,5 +302,5 @@ Como gerente, quero saber quem criou, alterou e consultou cadastros sem expor co
 
 ## References
 
-- [Constituição do projeto, versão 1.0.0](../../.specify/memory/constitution.md): condições de aprovação, qualidade, acessibilidade, segurança e desempenho.
+- [Constituição do projeto, versão 2.0.0](../../.specify/memory/constitution.md): qualidade proporcional ao MVP, organização, interface e segurança.
 - [LGPD — texto atualizado na Câmara dos Deputados](https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-normaatualizada-pl.html): referência para finalidade, necessidade, consentimento, revogação, conservação e eliminação (arts. 6º, 8º, 11, 15, 16 e 18). As regras de produto não declaram conformidade jurídica integral.

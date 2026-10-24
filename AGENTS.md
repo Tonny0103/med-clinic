@@ -16,11 +16,11 @@ Use four-space indentation in Java, lowercase package names, `PascalCase` classe
 
 ## Testing Guidelines
 
-Follow `.specify/memory/constitution.md`: write failing tests before behavior changes and maintain at least 80% line and branch coverage overall and in each changed module. Cover business rules with unit tests, adapters with integration tests, and critical journeys end to end. Use `*Test` and `*IT` naming consistently with the selected runner. No testing framework is installed yet.
+Follow constitution 2.0.0 and the user's demo scope: a few essential tests for critical business rules, permissions and transactions, written before critical behavior changes. There is no minimum coverage percentage or mandatory load/browser suite. Use fictitious patients only and complement automated checks with a short manual demonstration script.
 
 ## Commit & Pull Request Guidelines
 
-Use Conventional Commits, such as `chore: initialize repository` or `feat: add appointment scheduling`. There is no prior commit history to establish additional conventions. Pull requests should explain behavior changes, link relevant specifications and plans, record required approvals, and include test evidence. Include screenshots and accessibility evidence for interface changes.
+Use Conventional Commits. Commit each completed task individually, as requested by the user. Explain behavior changes and actual validation. No separate role approvals, document hashes or formal accessibility certificates are required for the demo MVP.
 
 ## Security & Configuration
 
