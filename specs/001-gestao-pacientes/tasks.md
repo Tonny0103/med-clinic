@@ -3,7 +3,7 @@
 Escopo decidido pelo usuário em 2026-10-24: manter as oito histórias, implantação pequena e poucos testes essenciais. Constituição 2.0.0. Este backlog substitui as 145 tarefas anteriores, preservadas no histórico Git. Executar em ordem; um commit por tarefa concluída. Testes de regras críticas precedem sua implementação. Não marcar execução externa/manual não realizada.
 
 - [X] T001 Alinhar constituição, AGENTS.md, spec, plano e contratos ao MVP; substituir aprovações formais pelo registro de escopo em docs/validation/001-gestao-pacientes/approvals.md.
-- [ ] T002 Criar projeto Java/Spring Boot/Thymeleaf, Maven Wrapper, configuração local/teste, formatação e README com comandos.
+- [X] T002 Criar projeto Java/Spring Boot/Thymeleaf, Maven Wrapper, configuração local/teste, formatação e README com comandos.
 - [ ] T003 Escrever testes essenciais e implementar regras puras de identidade, suspeita de duplicidade e vigência de convênios em domain.
 - [ ] T004 Implementar portas, persistência transacional, versões, idempotência, autenticação por três perfis e auditoria interna.
 - [ ] T005 [US1] Implementar formulário e cadastro com prontuário imutável, CPF/documento único, responsável de menor e justificativa de suspeita.

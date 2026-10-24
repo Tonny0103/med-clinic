@@ -59,6 +59,7 @@ application-local.yml
 application-local.yaml
 
 # Local database files
+data/
 *.mv.db
 *.trace.db
 *.h2.db

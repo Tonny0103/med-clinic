@@ -1,0 +1,12 @@
+.git/
+.agents/
+.codex/
+.specify/
+target/
+data/
+*.log
+.env*
+!.env.example
+secrets/
+*.pem
+*.key
