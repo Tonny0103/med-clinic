@@ -1,0 +1,7 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Entrar · Med Clinic</title><link rel="stylesheet" href="/style.css"></head>
+<body><main class="login"><p class="eyebrow">MED CLINIC · DEMONSTRAÇÃO</p><h1>Gestão de pacientes</h1><p>Acesse os cadastros administrativos da clínica.</p>
+<p th:if="${param.error}" role="alert">Usuário ou senha inválidos.</p>
+<p th:if="${param.logout}" role="status">Sessão encerrada.</p>
+<form th:action="@{/login}" method="post"><label for="username">Usuário</label><input id="username" name="username" autocomplete="username" required autofocus><label for="password">Senha</label><input id="password" name="password" type="password" autocomplete="current-password" required><button>Entrar</button></form><p class="muted">Use somente dados fictícios nesta demonstração.</p>
+</main></body></html>
