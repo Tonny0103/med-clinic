@@ -13,7 +13,7 @@
 <form th:action="@{/pacientes/{id}/situacao(id=${p.id})}" method="post"><th:block th:replace="~{fragments :: command}"></th:block><input type="hidden" name="target" th:value="${p.status == 'ATIVO' ? 'INATIVO' : 'ATIVO'}">
 <label for="statusReason">Motivo (sem dados de documento ou contato) *</label><input id="statusReason" name="reason" maxlength="500" required><button th:text="${p.status == 'ATIVO' ? 'Confirmar inativação' : 'Confirmar reativação'}"></button></form></details></section>
 <section th:replace="~{relationships :: relationships}"></section>
-<!-- consents -->
+<section th:replace="~{consents :: consents}"></section>
 <section th:replace="~{attachments :: attachments}"></section>
 <section class="card"><h2>Histórico de atendimentos</h2><div th:switch="${history.state().name()}">
 <p th:case="'NAO_CONFIGURADO'">Histórico ainda não disponível</p><p th:case="'VAZIO'">Nenhum atendimento encontrado</p><p role="alert" th:case="'FALHA'">Não foi possível consultar o histórico. Tente novamente.</p>

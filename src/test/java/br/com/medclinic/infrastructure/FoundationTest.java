@@ -19,6 +19,79 @@ import org.springframework.test.context.DynamicPropertySource;
 @ActiveProfiles("test")
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 class FoundationTest {
+    @Autowired
+    br.com.medclinic.application.ConsentService consents;
+
+    @Test
+    void revocationOfInactivePatientCanAtomicallyAddEvidenceOnlyInThatFlow() throws Exception {
+        Patient p = fixture();
+        p.cpf = "00000000949";
+        store.transaction(() -> {
+            store.save(p, -1);
+            return null;
+        });
+        var actor = new br.com.medclinic.application.Actor("recepcao", "RECEPCAO");
+        byte[] bytes = PrivateFileTest.png();
+        attachments.upload(
+                actor, p.id, 1, UUID.randomUUID(), java.util.Map.of("category", "IDENTIDADE"), bytes, "image/png");
+        UUID proof = store.find(p.id).orElseThrow().attachments.getFirst().id();
+        var form = new java.util.HashMap<>(java.util.Map.of(
+                "purpose",
+                "PROTECAO_DADOS",
+                "termVersion",
+                "DEMO-v1",
+                "decision",
+                "CONCEDIDO",
+                "manifestedOn",
+                patients.today().toString(),
+                "declarant",
+                "Paciente fictício",
+                "evidenceId",
+                proof.toString()));
+        consents.record(actor, p.id, 2, UUID.randomUUID(), form, false, null, null);
+        patients.changeStatus(
+                actor, p.id, 3, UUID.randomUUID(), java.util.Map.of("target", "INATIVO", "reason", "Pausa"));
+        web.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart(
+                                        "/pacientes/" + p.id + "/revogacoes")
+                                .file(new org.springframework.mock.web.MockMultipartFile(
+                                        "file", "evidencia-ficticia.png", "image/png", bytes))
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("recepcao")
+                                        .roles("RECEPCAO"))
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.csrf())
+                                .param("version", "4")
+                                .param("token", UUID.randomUUID().toString())
+                                .param("purpose", "PROTECAO_DADOS")
+                                .param("termVersion", "DEMO-v1")
+                                .param("manifestedOn", patients.today().toString())
+                                .param("declarant", "Paciente fictício")
+                                .param("evidenceId", ""))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .is3xxRedirection());
+        Patient revoked = store.find(p.id).orElseThrow();
+        assertThat(revoked.status).isEqualTo("INATIVO");
+        assertThat(revoked.consents).hasSize(2);
+        assertThat(revoked.attachments).hasSize(2);
+        assertThat(revoked.attachments.getLast().category()).isEqualTo("EVIDENCIA_REVOGACAO");
+        assertThat(br.com.medclinic.application.ConsentService.status(revoked, "PROTECAO_DADOS"))
+                .isEqualTo("REVOGADO");
+        attachments.invalidate(
+                new br.com.medclinic.application.Actor("gerente", "GERENTE"),
+                p.id,
+                5,
+                UUID.randomUUID(),
+                java.util.Map.of(
+                        "attachmentId",
+                        revoked.attachments.getLast().id().toString(),
+                        "reason",
+                        "Teste de invalidação"));
+        assertThat(br.com.medclinic.application.ConsentService.status(
+                        store.find(p.id).orElseThrow(), "PROTECAO_DADOS"))
+                .isEqualTo("REVOGADO");
+    }
+
     @org.springframework.test.context.bean.override.mockito.MockitoBean
     br.com.medclinic.application.FileScanner scanner;
 

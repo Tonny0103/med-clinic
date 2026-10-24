@@ -10,7 +10,7 @@ Escopo decidido pelo usuário em 2026-10-24: manter as oito histórias, implanta
 - [X] T006 [US2] Implementar busca paginada, ficha administrativa, aliases e histórico não disponível, com leitura auditada.
 - [X] T007 [US3] Implementar edição com conflito, correção documental, inativação e reativação com motivo.
 - [X] T008 [US4] Implementar responsáveis históricos, emergência, múltiplos convênios, preferência atual e consulta histórica por data.
-- [ ] T009 [US5] Implementar manifestações imutáveis, finalidades, revogação e evidência nova exclusivamente nesse fluxo para inativos.
+- [X] T009 [US5] Implementar manifestações imutáveis, finalidades, revogação e evidência nova exclusivamente nesse fluxo para inativos.
 - [X] T010 [US6] Implementar upload privado inspecionado, metadados neutros, leitura administrativa e invalidação gerencial; negar conteúdo clínico.
 - [ ] T011 [US7] Implementar prévia e confirmação transacional de mesclagem com duas provas, versões e proveniência.
 - [ ] T012 [US8] Implementar consulta gerencial paginada de eventos com filtros e auditoria da própria consulta.

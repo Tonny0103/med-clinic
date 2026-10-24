@@ -72,6 +72,7 @@ public class PatientController {
         model.addAttribute("p", view.patient());
         model.addAttribute("originalChart", view.originalChart());
         model.addAttribute("history", view.history());
+        model.addAttribute("consentStatuses", br.com.medclinic.application.ConsentService.statuses(view.patient()));
         model.addAttribute("reference", reference == null ? patients.today() : reference);
         model.addAttribute(
                 "effectivePreference",
