@@ -14,7 +14,7 @@
 <label for="statusReason">Motivo (sem dados de documento ou contato) *</label><input id="statusReason" name="reason" maxlength="500" required><button th:text="${p.status == 'ATIVO' ? 'Confirmar inativação' : 'Confirmar reativação'}"></button></form></details></section>
 <section th:replace="~{relationships :: relationships}"></section>
 <!-- consents -->
-<!-- attachments -->
+<section th:replace="~{attachments :: attachments}"></section>
 <section class="card"><h2>Histórico de atendimentos</h2><div th:switch="${history.state().name()}">
 <p th:case="'NAO_CONFIGURADO'">Histórico ainda não disponível</p><p th:case="'VAZIO'">Nenhum atendimento encontrado</p><p role="alert" th:case="'FALHA'">Não foi possível consultar o histórico. Tente novamente.</p>
 <div th:case="'DISPONIVEL'" class="table-scroll"><table><thead><tr><th>Data</th><th>Profissional</th><th>Tipo</th></tr></thead><tbody><tr th:each="entry : ${history.entries()}"><td th:text="${entry.date()}"></td><td th:text="${entry.professional()}"></td><td th:text="${entry.type()}"></td></tr></tbody></table></div></div><p class="muted">Somente resumos administrativos. Conteúdo clínico não é disponibilizado aqui.</p></section>

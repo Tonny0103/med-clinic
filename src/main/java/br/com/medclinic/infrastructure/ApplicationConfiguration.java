@@ -14,6 +14,24 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Configuration
 public class ApplicationConfiguration {
     @Bean
+    br.com.medclinic.application.FileScanner scanner(
+            @Value("${clinic.clam-host}") String host, @Value("${clinic.clam-port}") int port) {
+        return new ClamAvScanner(host, port);
+    }
+
+    @Bean
+    br.com.medclinic.application.PrivateFiles privateFiles(
+            @Value("${clinic.files}") String root, br.com.medclinic.application.FileScanner scanner) {
+        return new PrivateFileAdapter(java.nio.file.Path.of(root), scanner);
+    }
+
+    @Bean
+    br.com.medclinic.application.AttachmentService attachments(
+            PatientService patients, br.com.medclinic.application.PrivateFiles files) {
+        return new br.com.medclinic.application.AttachmentService(patients, files);
+    }
+
+    @Bean
     br.com.medclinic.application.RelationshipService relationships(PatientService patients) {
         return new br.com.medclinic.application.RelationshipService(patients);
     }

@@ -19,6 +19,65 @@ import org.springframework.test.context.DynamicPropertySource;
 @ActiveProfiles("test")
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 class FoundationTest {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    br.com.medclinic.application.FileScanner scanner;
+
+    @Autowired
+    br.com.medclinic.application.AttachmentService attachments;
+
+    @Test
+    void clinicalFilesAreDeniedAndAuditedForEveryRoleAndInactiveCannotUpload() throws Exception {
+        Patient p = fixture();
+        p.cpf = "00000000868";
+        store.transaction(() -> {
+            store.save(p, -1);
+            return null;
+        });
+        var actor = new br.com.medclinic.application.Actor("recepcao", "RECEPCAO");
+        byte[] content = PrivateFileTest.png();
+        attachments.upload(
+                actor, p.id, 1, UUID.randomUUID(), java.util.Map.of("category", "EXAME"), content, "image/png");
+        UUID clinicalId = store.find(p.id).orElseThrow().attachments.getFirst().id();
+        for (String role : java.util.List.of("RECEPCAO", "GERENTE", "MEDICO")) {
+            assertThatThrownBy(
+                            () -> attachments.download(new br.com.medclinic.application.Actor(role, role), clinicalId))
+                    .isInstanceOf(br.com.medclinic.application.AccessDenied.class);
+        }
+        assertThat(store.events().stream()
+                        .filter(e -> e.operation().equals("LER_ANEXO")
+                                && e.outcome().equals("NEGADO")
+                                && clinicalId.toString().equals(e.references())))
+                .hasSize(3);
+        attachments.upload(
+                actor, p.id, 2, UUID.randomUUID(), java.util.Map.of("category", "IDENTIDADE"), content, "image/png");
+        UUID administrativeId =
+                store.find(p.id).orElseThrow().attachments.getLast().id();
+        assertThat(attachments
+                        .download(new br.com.medclinic.application.Actor("medico", "MEDICO"), administrativeId)
+                        .content())
+                .isEqualTo(content);
+        attachments.invalidate(
+                new br.com.medclinic.application.Actor("gerente", "GERENTE"),
+                p.id,
+                3,
+                UUID.randomUUID(),
+                java.util.Map.of("attachmentId", administrativeId.toString(), "reason", "Vínculo de teste"));
+        assertThatThrownBy(() -> attachments.download(actor, administrativeId))
+                .isInstanceOf(br.com.medclinic.application.AccessDenied.class);
+        patients.changeStatus(
+                actor, p.id, 4, UUID.randomUUID(), java.util.Map.of("target", "INATIVO", "reason", "Pausa"));
+        assertThatThrownBy(() -> attachments.upload(
+                        actor,
+                        p.id,
+                        5,
+                        UUID.randomUUID(),
+                        java.util.Map.of("category", "IDENTIDADE", "revocation", "true"),
+                        content,
+                        "image/png"))
+                .isInstanceOf(RuleViolation.class);
+        assertThat(store.find(p.id).orElseThrow().attachments).hasSize(2);
+    }
+
     @Autowired
     org.springframework.test.web.servlet.MockMvc web;
 
