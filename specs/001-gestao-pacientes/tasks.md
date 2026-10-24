@@ -4,7 +4,7 @@ Escopo decidido pelo usuário em 2026-10-24: manter as oito histórias, implanta
 
 - [X] T001 Alinhar constituição, AGENTS.md, spec, plano e contratos ao MVP; substituir aprovações formais pelo registro de escopo em docs/validation/001-gestao-pacientes/approvals.md.
 - [X] T002 Criar projeto Java/Spring Boot/Thymeleaf, Maven Wrapper, configuração local/teste, formatação e README com comandos.
-- [ ] T003 Escrever testes essenciais e implementar regras puras de identidade, suspeita de duplicidade e vigência de convênios em domain.
+- [X] T003 Escrever testes essenciais e implementar regras puras de identidade, suspeita de duplicidade e vigência de convênios em domain.
 - [ ] T004 Implementar portas, persistência transacional, versões, idempotência, autenticação por três perfis e auditoria interna.
 - [ ] T005 [US1] Implementar formulário e cadastro com prontuário imutável, CPF/documento único, responsável de menor e justificativa de suspeita.
 - [ ] T006 [US2] Implementar busca paginada, ficha administrativa, aliases e histórico não disponível, com leitura auditada.
