@@ -20,6 +20,55 @@ import org.springframework.test.context.DynamicPropertySource;
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 class FoundationTest {
     @Autowired
+    br.com.medclinic.application.AuditService audit;
+
+    @Test
+    void auditQueryIsManagerOnlyFilteredAndAuditsItselfOnce() throws Exception {
+        String uniqueActor = "usuario-teste-" + UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        store.audit(new ClinicStore.Event(
+                eventId, Instant.now(), uniqueActor, "RECEPCAO", "EVENTO_TESTE", null, "SUCESSO", "phone", "", ""));
+        long before = store.events().stream()
+                .filter(e -> e.operation().equals("CONSULTAR_AUDITORIA")
+                        && e.outcome().equals("SUCESSO"))
+                .count();
+        var report = audit.query(
+                new br.com.medclinic.application.Actor("gerente", "GERENTE"),
+                java.util.Map.of("actorFilter", uniqueActor),
+                0);
+        assertThat(report.page().items())
+                .hasSize(1)
+                .extracting(ClinicStore.Event::id)
+                .containsExactly(eventId);
+        assertThat(store.events().stream()
+                        .filter(e -> e.operation().equals("CONSULTAR_AUDITORIA")
+                                && e.outcome().equals("SUCESSO"))
+                        .count())
+                .isEqualTo(before + 1);
+        assertThatThrownBy(() -> audit.query(
+                        new br.com.medclinic.application.Actor("recepcao", "RECEPCAO"), java.util.Map.of(), 0))
+                .isInstanceOf(br.com.medclinic.application.AccessDenied.class);
+        web.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/auditoria")
+                                .param("actorFilter", uniqueActor)
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("gerente")
+                                        .roles("GERENTE")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .string(org.hamcrest.Matchers.containsString(uniqueActor)));
+        web.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/auditoria")
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("medico")
+                                        .roles("MEDICO")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .isForbidden());
+        assertThat(store.events().toString()).doesNotContain("00000000353", "Pessoa fictícia de cadastro");
+    }
+
+    @Autowired
     br.com.medclinic.application.MergeService merges;
 
     @Test
