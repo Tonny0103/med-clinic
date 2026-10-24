@@ -68,6 +68,47 @@ public class PatientController {
         return "patient";
     }
 
+    @GetMapping("/pacientes/{id}/editar")
+    String editForm(@PathVariable UUID id, Authentication auth, Model model) {
+        patients.requireWriter(WebSupport.actor(auth), "FORMULARIO_EDICAO", id);
+        var p = patients.read(WebSupport.actor(auth), id).patient();
+        br.com.medclinic.domain.Rules.require(
+                "status", p.status.equals("ATIVO") && p.id.equals(id), "Abra um cadastro ativo para editar.");
+        Map<String, String> form = PatientService.profileFields(p);
+        form.put("version", Long.toString(p.version));
+        model.addAttribute("form", form);
+        model.addAttribute("editing", true);
+        model.addAttribute("patientId", id);
+        model.addAttribute("errors", Map.of());
+        return "patient-form";
+    }
+
+    @PostMapping("/pacientes/{id}/editar")
+    String edit(
+            @PathVariable UUID id,
+            @RequestParam Map<String, String> form,
+            Authentication auth,
+            Model model,
+            HttpServletResponse response) {
+        try {
+            patients.edit(WebSupport.actor(auth), id, version(form), token(form), form);
+            return "redirect:/pacientes/" + id + "?sucesso";
+        } catch (RuleViolation error) {
+            response.setStatus(422);
+            model.addAttribute("form", form);
+            model.addAttribute("errors", Map.of(error.field, error.getMessage()));
+            model.addAttribute("editing", true);
+            model.addAttribute("patientId", id);
+            return "patient-form";
+        }
+    }
+
+    @PostMapping("/pacientes/{id}/situacao")
+    String status(@PathVariable UUID id, @RequestParam Map<String, String> form, Authentication auth) {
+        patients.changeStatus(WebSupport.actor(auth), id, version(form), token(form), form);
+        return "redirect:/pacientes/" + id + "?sucesso";
+    }
+
     static UUID token(Map<String, String> form) {
         try {
             return UUID.fromString(form.getOrDefault("token", ""));

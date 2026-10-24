@@ -7,7 +7,10 @@
 <section class="card"><h2>Dados administrativos</h2><dl>
 <dt>Nascimento</dt><dd th:text="${p.birthdate}"></dd><dt>Sexo informado</dt><dd th:text="${p.sex}"></dd><dt>Nacionalidade</dt><dd th:text="${p.nationality}"></dd><dt>CPF</dt><dd th:text="${p.cpf.isEmpty() ? 'Sem CPF' : p.cpf}"></dd><dt>Documento alternativo</dt><dd th:text="${p.alternativeType + ' ' + p.alternativeNumber + ' · ' + p.alternativeCountry + ' · ' + p.alternativeIssuer}"></dd><dt>Telefone</dt><dd th:text="${p.phone}"></dd><dt>E-mail</dt><dd th:text="${p.email.isEmpty() ? 'Não informado' : p.email}"></dd><dt>Endereço</dt><dd th:text="${p.address + ' · ' + p.country}"></dd>
 </dl></section>
-<!-- maintenance -->
+<section class="card" th:if="${actor.canWrite()}"><h2>Manutenção</h2><a class="button" th:if="${p.status == 'ATIVO'}" th:href="@{/pacientes/{id}/editar(id=${p.id})}">Editar cadastro</a>
+<details><summary th:text="${p.status == 'ATIVO' ? 'Inativar cadastro' : 'Reativar cadastro'}"></summary><p>O prontuário, documentos e vínculos serão preservados.</p>
+<form th:action="@{/pacientes/{id}/situacao(id=${p.id})}" method="post"><th:block th:replace="~{fragments :: command}"></th:block><input type="hidden" name="target" th:value="${p.status == 'ATIVO' ? 'INATIVO' : 'ATIVO'}">
+<label for="statusReason">Motivo (sem dados de documento ou contato) *</label><input id="statusReason" name="reason" maxlength="500" required><button th:text="${p.status == 'ATIVO' ? 'Confirmar inativação' : 'Confirmar reativação'}"></button></form></details></section>
 <!-- relationships -->
 <!-- consents -->
 <!-- attachments -->

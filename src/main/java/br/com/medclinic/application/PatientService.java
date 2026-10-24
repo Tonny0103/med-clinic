@@ -33,6 +33,77 @@ public class PatientService {
         return LocalDate.now(clock);
     }
 
+    public UUID changeStatus(Actor actor, UUID id, long version, UUID token, Map<String, String> form) {
+        return write(actor, id, version, token, "SITUACAO", form, p -> {
+            br.com.medclinic.domain.Rules.text("reason", value(form, "reason"), 500);
+            String target = value(form, "target");
+            require(
+                    "target",
+                    java.util.Set.of("ATIVO", "INATIVO").contains(target)
+                            && !"MESCLADO".equals(p.status)
+                            && !target.equals(p.status),
+                    "Transição inválida. Cadastros mesclados não podem ser reativados.");
+            p.status = target;
+        });
+    }
+
+    public UUID edit(Actor actor, UUID id, long version, UUID token, Map<String, String> form) {
+        return write(actor, id, version, token, "EDITAR", form, p -> {
+            active(p);
+            String oldCpf = p.cpf;
+            String oldAlternative = alternativeKey(p);
+            String oldAlternativeNumber = p.alternativeNumber;
+            applyProfile(p, form);
+            boolean correction = !oldCpf.isBlank() && !oldCpf.equals(br.com.medclinic.domain.Rules.digits(p.cpf))
+                    || !oldAlternativeNumber.isBlank() && !oldAlternative.equals(alternativeKey(p));
+            if (correction) {
+                br.com.medclinic.domain.Rules.text("reason", value(form, "reason"), 500);
+                proof(p, uuid(form, "evidenceId"));
+            }
+            require(
+                    "alternativeNumber",
+                    !(oldCpf.isBlank()
+                            && !p.cpf.isBlank()
+                            && !oldAlternativeNumber.isBlank()
+                            && p.alternativeNumber.isBlank()),
+                    "Ao acrescentar CPF, preserve o documento alternativo anterior.");
+            br.com.medclinic.domain.Rules.validate(p, today());
+            checkSuspicion(p, value(form, "reason"));
+        });
+    }
+
+    protected Patient.Attachment proof(Patient p, UUID evidence) {
+        return p.attachments.stream()
+                .filter(a -> a.id().equals(evidence) && a.administrative())
+                .findFirst()
+                .orElseThrow(() ->
+                        new RuleViolation("evidenceId", "Selecione prova administrativa válida desta identidade."));
+    }
+
+    private String alternativeKey(Patient p) {
+        return br.com.medclinic.domain.Rules.normalize(
+                p.alternativeType + "|" + p.alternativeNumber + "|" + p.alternativeCountry + "|" + p.alternativeIssuer);
+    }
+
+    public static Map<String, String> profileFields(Patient p) {
+        Map<String, String> f = new java.util.LinkedHashMap<>();
+        f.put("name", p.name);
+        f.put("birthdate", p.birthdate.toString());
+        f.put("sex", p.sex);
+        f.put("nationality", p.nationality);
+        f.put("cpf", p.cpf);
+        f.put("alternativeType", p.alternativeType);
+        f.put("alternativeNumber", p.alternativeNumber);
+        f.put("alternativeCountry", p.alternativeCountry);
+        f.put("alternativeIssuer", p.alternativeIssuer);
+        f.put("alternativeReason", p.alternativeReason);
+        f.put("phone", p.phone);
+        f.put("email", p.email);
+        f.put("address", p.address);
+        f.put("country", p.country);
+        return f;
+    }
+
     public UUID create(Actor actor, UUID token, Map<String, String> form) {
         authorize(actor, actor.canWrite(), "CRIAR", null);
         String fingerprint = fingerprint(form);
@@ -270,16 +341,25 @@ public class PatientService {
                 }
                 store.lock(java.util.List.of(id));
                 Patient p = current(id, version);
+                Map<String, String> before = profileFields(p);
                 mutation.accept(p);
+                Map<String, String> after = profileFields(p);
+                String fields = operation.equals("EDITAR")
+                        ? String.join(
+                                ",",
+                                before.keySet().stream()
+                                        .filter(key -> !before.get(key).equals(after.get(key)))
+                                        .toList())
+                        : auditFields(form);
                 store.save(p, version);
                 event(
                         actor,
                         operation,
                         p.id,
                         "SUCESSO",
-                        auditFields(form),
+                        fields,
                         form.getOrDefault("reason", ""),
-                        form.getOrDefault("evidenceId", ""));
+                        auditReference(form.getOrDefault("evidenceId", "")));
                 store.receipt(actor.username(), token, new ClinicStore.Receipt(operation, fingerprint, p.id));
                 return p.id;
             });
@@ -299,6 +379,14 @@ public class PatientService {
                         .sorted()
                         .limit(40)
                         .toList());
+    }
+
+    private String auditReference(String value) {
+        try {
+            return UUID.fromString(value).toString();
+        } catch (IllegalArgumentException error) {
+            return "";
+        }
     }
 
     protected String fingerprint(Map<String, String> form) {

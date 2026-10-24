@@ -180,4 +180,41 @@ class FoundationTest {
         p.cpf = "00000000272";
         return p;
     }
+
+    @Test
+    void inactivationAndReturnPreserveChartAndRejectStaleChanges() {
+        Patient patient = fixture();
+        patient.cpf = "00000000604";
+        store.transaction(() -> {
+            store.save(patient, -1);
+            return null;
+        });
+        String chart = patient.chart;
+        var reception = new br.com.medclinic.application.Actor("recepcao", "RECEPCAO");
+        var inactive = java.util.Map.of("target", "INATIVO", "reason", "Pausa de demonstração");
+        patients.changeStatus(reception, patient.id, 1, UUID.randomUUID(), inactive);
+        assertThat(store.find(patient.id).orElseThrow().status).isEqualTo("INATIVO");
+        assertThat(patients.search(reception, chart, "ATIVO", 0).total()).isEqualTo(1);
+        assertThat(patients.search(reception, patient.name, "ATIVO", 0).total()).isZero();
+        assertThatThrownBy(() -> patients.changeStatus(
+                        reception,
+                        patient.id,
+                        1,
+                        UUID.randomUUID(),
+                        java.util.Map.of("target", "ATIVO", "reason", "Retorno")))
+                .isInstanceOf(RuleViolation.class);
+        assertThatThrownBy(() -> patients.changeStatus(
+                        reception, patient.id, 2, UUID.randomUUID(), java.util.Map.of("target", "ATIVO", "reason", "")))
+                .isInstanceOf(RuleViolation.class);
+        patients.changeStatus(
+                reception,
+                patient.id,
+                2,
+                UUID.randomUUID(),
+                java.util.Map.of("target", "ATIVO", "reason", "Retorno de demonstração"));
+        Patient restored = store.find(patient.id).orElseThrow();
+        assertThat(restored.chart).isEqualTo(chart);
+        assertThat(restored.status).isEqualTo("ATIVO");
+        assertThat(restored.version).isEqualTo(3);
+    }
 }

@@ -8,7 +8,7 @@ Escopo decidido pelo usuário em 2026-10-24: manter as oito histórias, implanta
 - [X] T004 Implementar portas, persistência transacional, versões, idempotência, autenticação por três perfis e auditoria interna.
 - [X] T005 [US1] Implementar formulário e cadastro com prontuário imutável, CPF/documento único, responsável de menor e justificativa de suspeita.
 - [X] T006 [US2] Implementar busca paginada, ficha administrativa, aliases e histórico não disponível, com leitura auditada.
-- [ ] T007 [US3] Implementar edição com conflito, correção documental, inativação e reativação com motivo.
+- [X] T007 [US3] Implementar edição com conflito, correção documental, inativação e reativação com motivo.
 - [ ] T008 [US4] Implementar responsáveis históricos, emergência, múltiplos convênios, preferência atual e consulta histórica por data.
 - [ ] T009 [US5] Implementar manifestações imutáveis, finalidades, revogação e evidência nova exclusivamente nesse fluxo para inativos.
 - [ ] T010 [US6] Implementar upload privado inspecionado, metadados neutros, leitura administrativa e invalidação gerencial; negar conteúdo clínico.

@@ -95,6 +95,10 @@ public final class Rules {
                 Set.of("FEMININO", "MASCULINO", "OUTRO", "NAO_INFORMADO").contains(p.sex),
                 "Selecione o sexo ou não informado.");
         text("nationality", p.nationality, 80);
+        require(
+                "nationality",
+                java.util.Arrays.asList(Locale.getISOCountries()).contains(p.nationality),
+                "Use o código de duas letras do país, por exemplo BR ou AR.");
         phone("phone", p.phone);
         text("address", p.address, 500);
         text("country", p.country, 80);
