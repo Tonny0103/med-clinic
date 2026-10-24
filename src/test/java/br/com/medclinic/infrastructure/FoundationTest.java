@@ -55,7 +55,7 @@ class FoundationTest {
     ClinicStore store;
 
     @Test
-    void createsOnceAndRejectsDuplicateDocumentAndDoctorWrite() {
+    void createsOnceAndRejectsDuplicateDocumentAndDoctorWrite() throws Exception {
         var reception = new br.com.medclinic.application.Actor("recepcao", "RECEPCAO");
         var form = new java.util.HashMap<>(java.util.Map.of(
                 "name",
@@ -76,6 +76,27 @@ class FoundationTest {
                 "BR"));
         UUID token = UUID.randomUUID();
         UUID id = patients.create(reception, token, form);
+        web.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/pacientes")
+                                .param("q", "PESSOA FICTICIA")
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("medico")
+                                        .roles("MEDICO")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .string(org.hamcrest.Matchers.containsString("Pessoa fictícia de cadastro")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("00000000353"))));
+        web.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/pacientes/" + id)
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("medico")
+                                        .roles("MEDICO")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .string(org.hamcrest.Matchers.containsString("Histórico ainda não disponível")));
         assertThat(patients.create(reception, token, form)).isEqualTo(id);
         assertThat(store.find(id).orElseThrow().chart).hasSize(12);
         assertThat(store.events().stream()
@@ -101,6 +122,7 @@ class FoundationTest {
     @Test
     void failedTransactionLeavesNeitherPatientNorSuccessAudit() {
         Patient patient = fixture();
+        patient.cpf = "00000000515";
         UUID eventId = UUID.randomUUID();
         assertThatThrownBy(() -> store.transaction(() -> {
                     store.save(patient, -1);

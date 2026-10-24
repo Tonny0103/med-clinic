@@ -17,10 +17,16 @@ import java.util.function.Consumer;
 public class PatientService {
     protected final ClinicStore store;
     protected final Clock clock;
+    private final VisitHistory visits;
 
     public PatientService(ClinicStore store, Clock clock) {
+        this(store, clock, id -> new VisitHistory.Result(VisitHistory.State.NAO_CONFIGURADO, java.util.List.of()));
+    }
+
+    public PatientService(ClinicStore store, Clock clock, VisitHistory visits) {
         this.store = store;
         this.clock = clock;
+        this.visits = visits;
     }
 
     public LocalDate today() {
@@ -82,11 +88,72 @@ public class PatientService {
                     store.find(id).orElseThrow(() -> new RuleViolation("patient", "Paciente não encontrado."));
             Patient p = canonical(id);
             event(actor, "CONSULTAR", p.id, "SUCESSO", "", "", id.equals(p.id) ? "" : id.toString());
-            return new PatientView(p, id.equals(p.id) ? "" : requested.chart);
+            VisitHistory.Result history;
+            try {
+                history = visits.query(p.id);
+                if (history.state() == VisitHistory.State.DISPONIVEL) {
+                    var entries = history.entries().stream()
+                            .sorted(java.util.Comparator.comparing(VisitHistory.Entry::date)
+                                    .reversed())
+                            .toList();
+                    history = new VisitHistory.Result(
+                            entries.isEmpty() ? VisitHistory.State.VAZIO : VisitHistory.State.DISPONIVEL, entries);
+                }
+            } catch (RuntimeException unavailable) {
+                history = new VisitHistory.Result(VisitHistory.State.FALHA, java.util.List.of());
+            }
+            return new PatientView(p, id.equals(p.id) ? "" : requested.chart, history);
         });
     }
 
-    public record PatientView(Patient patient, String originalChart) {}
+    public record PatientView(Patient patient, String originalChart, VisitHistory.Result history) {}
+
+    public record SearchHit(
+            UUID id, String name, LocalDate birthdate, String maskedCpf, String chart, String status, String alias) {}
+
+    public Page<SearchHit> search(Actor actor, String query, String status, int page) {
+        authorize(actor, actor.canRead(), "BUSCAR", null);
+        String q = br.com.medclinic.domain.Rules.normalize(query);
+        require("q", q.length() <= 160, "Use até 160 caracteres na busca.");
+        boolean exact = query.matches("[0-9.\\-\\s]+")
+                && java.util.Set.of(11, 12)
+                        .contains(br.com.medclinic.domain.Rules.digits(query).length());
+        return store.transaction(() -> {
+            var hits = new java.util.LinkedHashMap<UUID, SearchHit>();
+            if (q.length() >= 2) {
+                for (Patient candidate : store.all()) {
+                    boolean match = exact
+                            ? candidate.chart.equals(br.com.medclinic.domain.Rules.digits(query))
+                                    || (!candidate.cpf.isBlank()
+                                            && candidate.cpf.equals(br.com.medclinic.domain.Rules.digits(query)))
+                            : candidate.mergedInto == null
+                                    && br.com.medclinic.domain.Rules.normalize(candidate.name)
+                                            .contains(q)
+                                    && ("TODOS".equals(status) || candidate.status.equals(status));
+                    if (match) {
+                        Patient p = candidate.mergedInto == null ? candidate : canonical(candidate.id);
+                        hits.put(
+                                p.id,
+                                new SearchHit(
+                                        candidate.id,
+                                        p.name,
+                                        p.birthdate,
+                                        br.com.medclinic.domain.Rules.maskedCpf(p.cpf),
+                                        p.chart,
+                                        p.status,
+                                        candidate.id.equals(p.id) ? "" : candidate.chart));
+                    }
+                }
+            }
+            var sorted = hits.values().stream()
+                    .sorted(java.util.Comparator.comparing(
+                                    (SearchHit h) -> br.com.medclinic.domain.Rules.normalize(h.name()))
+                            .thenComparing(SearchHit::chart))
+                    .toList();
+            event(actor, "BUSCAR", null, sorted.isEmpty() ? "VAZIO" : "SUCESSO", "", "", "");
+            return Page.of(sorted, page);
+        });
+    }
 
     protected void applyProfile(Patient p, Map<String, String> f) {
         p.name = value(f, "name");

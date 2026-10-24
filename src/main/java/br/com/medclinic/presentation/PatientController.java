@@ -22,6 +22,19 @@ public class PatientController {
         this.patients = patients;
     }
 
+    @GetMapping("/pacientes")
+    String search(
+            @RequestParam(defaultValue = "") String q,
+            @RequestParam(defaultValue = "ATIVO") String status,
+            @RequestParam(defaultValue = "0") int page,
+            Authentication auth,
+            Model model) {
+        model.addAttribute("page", patients.search(WebSupport.actor(auth), q, status, page));
+        model.addAttribute("q", q);
+        model.addAttribute("status", status);
+        return "patients";
+    }
+
     @GetMapping("/pacientes/novo")
     String newPatient(Authentication auth, Model model) {
         patients.requireWriter(WebSupport.actor(auth), "FORMULARIO_CADASTRO", null);
@@ -51,6 +64,7 @@ public class PatientController {
         var view = patients.read(WebSupport.actor(auth), id);
         model.addAttribute("p", view.patient());
         model.addAttribute("originalChart", view.originalChart());
+        model.addAttribute("history", view.history());
         return "patient";
     }
 
