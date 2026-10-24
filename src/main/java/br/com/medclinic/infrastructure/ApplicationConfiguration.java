@@ -14,6 +14,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Configuration
 public class ApplicationConfiguration {
     @Bean
+    br.com.medclinic.application.RelationshipService relationships(PatientService patients) {
+        return new br.com.medclinic.application.RelationshipService(patients);
+    }
+
+    @Bean
     Clock clinicClock(@Value("${clinic.zone}") String zone) {
         return Clock.system(ZoneId.of(zone));
     }

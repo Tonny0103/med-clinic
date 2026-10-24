@@ -10,6 +10,11 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 
 @ControllerAdvice
 public class SharedModel {
+    @ModelAttribute("submitted")
+    java.util.Map<String, String> submitted() {
+        return java.util.Map.of();
+    }
+
     private final PatientService patients;
 
     public SharedModel(PatientService patients) {

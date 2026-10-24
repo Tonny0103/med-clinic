@@ -60,11 +60,22 @@ public class PatientController {
     }
 
     @GetMapping("/pacientes/{id}")
-    String detail(@PathVariable UUID id, Authentication auth, Model model) {
+    String detail(
+            @PathVariable UUID id,
+            @RequestParam(required = false)
+                    @org.springframework.format.annotation.DateTimeFormat(
+                            iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+                    java.time.LocalDate reference,
+            Authentication auth,
+            Model model) {
         var view = patients.read(WebSupport.actor(auth), id);
         model.addAttribute("p", view.patient());
         model.addAttribute("originalChart", view.originalChart());
         model.addAttribute("history", view.history());
+        model.addAttribute("reference", reference == null ? patients.today() : reference);
+        model.addAttribute(
+                "effectivePreference",
+                br.com.medclinic.application.RelationshipService.effectivePreference(view.patient(), patients.today()));
         return "patient";
     }
 

@@ -181,6 +181,53 @@ class FoundationTest {
         return p;
     }
 
+    @Autowired
+    br.com.medclinic.application.RelationshipService relationships;
+
+    @Test
+    void renewalPreservesPreviousExpiryAndHistoricalPeriod() {
+        Patient p = fixture();
+        p.cpf = "00000000787";
+        p.phone = "+55 65 90000-0000";
+        p.address = "Rua fictícia, 7";
+        store.transaction(() -> {
+            store.save(p, -1);
+            return null;
+        });
+        var actor = new br.com.medclinic.application.Actor("recepcao", "RECEPCAO");
+        LocalDate today = patients.today();
+        var form = new java.util.HashMap<>(java.util.Map.of(
+                "insurer",
+                "Operadora fictícia",
+                "plan",
+                "Demo",
+                "card",
+                "CARD-DEMO",
+                "startsOn",
+                today.minusMonths(2).toString(),
+                "expiresOn",
+                today.minusDays(10).toString()));
+        relationships.update(actor, p.id, 1, UUID.randomUUID(), "convenio", form);
+        Patient afterAddition = store.find(p.id).orElseThrow();
+        UUID oldId = afterAddition.coverages.getFirst().id();
+        relationships.update(
+                actor, p.id, 2, UUID.randomUUID(), "preferencia", java.util.Map.of("preference", oldId.toString()));
+        form.put("startsOn", today.minusDays(5).toString());
+        form.put("expiresOn", today.plusYears(1).toString());
+        form.put("supersedesCoverageId", oldId.toString());
+        form.put("preferenceAfter", "SUCCESSOR");
+        relationships.update(actor, p.id, 3, UUID.randomUUID(), "convenio", form);
+        Patient renewed = store.find(p.id).orElseThrow();
+        assertThat(renewed.coverages).hasSize(2);
+        var old = renewed.coverages.getFirst();
+        assertThat(old.expiresOn()).isEqualTo(today.minusDays(10));
+        assertThat(old.inForceOn(today.minusDays(20))).isTrue();
+        assertThat(old.inForceOn(today)).isFalse();
+        assertThat(renewed.coverages.getLast().supersedesCoverageId()).isEqualTo(old.id());
+        assertThat(renewed.preference)
+                .isEqualTo(renewed.coverages.getLast().id().toString());
+    }
+
     @Test
     void inactivationAndReturnPreserveChartAndRejectStaleChanges() {
         Patient patient = fixture();
