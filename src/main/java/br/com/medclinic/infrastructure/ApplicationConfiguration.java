@@ -14,6 +14,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Configuration
 public class ApplicationConfiguration {
     @Bean
+    br.com.medclinic.application.MergeService merges(PatientService patients) {
+        return new br.com.medclinic.application.MergeService(patients);
+    }
+
+    @Bean
     br.com.medclinic.application.ConsentService consents(
             PatientService patients, br.com.medclinic.application.AttachmentService attachments) {
         return new br.com.medclinic.application.ConsentService(patients, attachments);
