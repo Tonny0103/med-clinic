@@ -81,7 +81,8 @@ public class Patient {
             String declarant,
             UUID guardianId,
             String actor,
-            UUID evidenceId) {}
+            UUID evidenceId,
+            long generation) {}
 
     public record Attachment(
             UUID id,
@@ -108,5 +109,7 @@ public class Patient {
             String reason,
             String choices,
             String actor,
-            Instant mergedAt) {}
+            Instant mergedAt,
+            long destinationVersion,
+            UUID destinationId) {}
 }

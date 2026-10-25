@@ -2,7 +2,7 @@
 
 Patient é o agregado administrativo: UUID, prontuário imutável, versão, nome/nascimento/sexo/nacionalidade, CPF e documento alternativo, telefone/email/endereço, situação ATIVO/INATIVO/MESCLADO e destino de mesclagem. Contém responsáveis com vigência, emergência, convênios com períodos e segmento anterior, preferência atual, decisões imutáveis, metadados de anexos e registros de mesclagem.
 
-Persistência: tabela patients com colunas de pesquisa/identidade únicas e payload textual; alterações transacionais verificam versão. Prontuário provém de sequência independente e nunca é reutilizado. Filhos têm UUID e originalPatientId; períodos de responsáveis e convênios são preservados. CPF anterior legítimo/documento alternativo continuam reservados; correção documentada libera associação errada e mantém histórico/auditoria. Alias mesclado conserva número e dados de origem.
+Persistência: patients contém pesquisa, prontuário único, versão e payload textual; identities reserva chaves documentais únicas, inclusive de origens mescladas. Busca de CPF usa a reserva atual, não snapshots antigos. Correção comprovada libera a associação errada mesmo após mesclagem, preservando o histórico e os aliases. Recibos usam ator/chave de submissão. Prontuário vem de sequência independente e nunca é reutilizado. Filhos mantêm UUID/origin e períodos; sourceId/sourceChart das mesclagens conservam as referências originais.
 
 Coverage: startsOn inclusivo, endsOn primeiro dia fora da vigência, expiresOn inclusivo. Renovação cria sucessor com supersedesCoverageId e mantém validade histórica anterior. Consulta passada não muda preferência atual.
 

@@ -17,11 +17,16 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfiguration {
     @Bean
+    BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
     UserDetailsService users(
             @Value("${clinic.reception-password}") String reception,
             @Value("${clinic.manager-password}") String manager,
-            @Value("${clinic.doctor-password}") String doctor) {
-        var encoder = new BCryptPasswordEncoder();
+            @Value("${clinic.doctor-password}") String doctor,
+            BCryptPasswordEncoder encoder) {
         return new InMemoryUserDetailsManager(
                 User.withUsername("recepcao")
                         .password(encoder.encode(secret(reception, "RECEPTION_PASSWORD")))
@@ -47,8 +52,14 @@ public class SecurityConfiguration {
     SecurityFilterChain security(HttpSecurity http, ClinicStore store) throws Exception {
         http.authorizeHttpRequests(auth -> auth.requestMatchers("/login", "/style.css", "/error")
                         .permitAll()
+                        .requestMatchers("/mesclagem", "/mesclagem/**", "/auditoria")
+                        .hasRole("GERENTE")
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/pacientes/**")
+                        .hasAnyRole("RECEPCAO", "GERENTE")
+                        .requestMatchers("/pacientes/*/editar")
+                        .hasAnyRole("RECEPCAO", "GERENTE")
                         .anyRequest()
-                        .authenticated())
+                        .hasAnyRole("RECEPCAO", "GERENTE", "MEDICO"))
                 .formLogin(form -> form.loginPage("/login")
                         .defaultSuccessUrl("/pacientes", true)
                         .permitAll())
@@ -65,7 +76,12 @@ public class SecurityConfiguration {
                             UUID.randomUUID(),
                             Instant.now(),
                             auth == null ? "ANONIMO" : auth.getName(),
-                            "HTTP",
+                            auth == null
+                                    ? "ANONIMO"
+                                    : auth.getAuthorities().stream()
+                                            .map(a -> a.getAuthority().replaceFirst("^ROLE_", ""))
+                                            .findFirst()
+                                            .orElse("SEM_PERFIL"),
                             "ACESSO_NEGADO",
                             null,
                             "NEGADO",

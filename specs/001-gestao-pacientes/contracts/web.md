@@ -1,10 +1,27 @@
-# Contrato web — MVP
+# Contrato web — MVP implementado
 
-Páginas Thymeleaf em português, login por formulário e sessão. GET /pacientes pesquisa com q, situação e página (20). GET /pacientes/novo e POST /pacientes criam. GET /pacientes/{id} mostra ficha. POSTs por ação sob /pacientes/{id}: editar, situacao, responsaveis, emergencia, convenios, preferencia, consentimentos, revogacoes, anexos, invalidar. GET /anexos/{id} só libera anexo administrativo válido após autorização e auditoria; arquivos clínicos sempre negados.
+Thymeleaf em português, sessão e login por formulário. Contas externas recepcao, gerente e medico; sem administração de usuários.
 
-GET /mesclagem e POST de prévia/confirmacao são gerenciais, com confirmação explícita e resolução dos conflitos. GET /auditoria é gerencial, filtros período/ator/paciente/operação e paginação20.
+| Ação | Rota |
+| --- | --- |
+| Busca com q/status/page, 20 por página | GET /pacientes |
+| Novo cadastro | GET /pacientes/novo; POST /pacientes |
+| Ficha e consulta de convênio por reference | GET /pacientes/{id} |
+| Edição | GET /pacientes/{id}/editar; POST /pacientes/{id}/editar |
+| Inativar/reativar | POST /pacientes/{id}/situacao |
+| Responsáveis, emergência, convênio e preferência | POST /pacientes/{id}/vinculos/{action} |
+| Manifestação com prova existente | POST /pacientes/{id}/consentimentos |
+| Revogação, com prova existente OU nova | POST multipart /pacientes/{id}/revogacoes |
+| Upload em ativo / invalidação gerencial | POST /pacientes/{id}/anexos; POST /pacientes/{id}/anexos/invalidar |
+| Download administrativo, nunca clínico | GET /anexos/{id} |
+| Mesclagem gerencial | GET /mesclagem; POST /mesclagem/comparar, /mesclagem/previa, /mesclagem/confirmar |
+| Auditoria gerencial | GET /auditoria |
+| Sessão | GET/POST /login; POST /logout |
 
-Formulários incluem CSRF, versão e chave única de submissão. Respostas privadas usam no-store; cookies HttpOnly/SameSite, Secure quando HTTPS. Post/Redirect/Get no sucesso. Erros mantêm dados válidos; conflito exige revisar versão. Labels, foco visível, semântica de tabela e mensagens textuais.
+Actions de vínculos: responsavel, encerrar-responsavel, emergencia, convenio, encerrar-convenio e preferencia. Datas de vigência são locais; timestamps de auditoria UTC.
 
-Anexos aceitam PDF/JPEG/PNG até10MiB, bytes compatíveis e ClamAV antes do vínculo. Não servir pasta privada por rota estática. Não revelar nome original clínico.
+Formulários de escrita usam CSRF, versão e chave de submissão; sucesso usa Post/Redirect/Get. Conflito exige revisão. Cadastro/edição conservam campos válidos após erro. Respostas protegidas usam no-store. Cookies HttpOnly/SameSite, Secure no perfil público HTTPS.
 
+Anexos PDF/JPEG/PNG não vazios até 10 MiB, conteúdo validado e ClamAV antes do vínculo. A pasta privada não é recurso estático; não se expõe nome original clínico. Revogação de inativo com arquivo novo só ocorre na rota própria, com categoria fixada no servidor.
+
+Referência executável: controllers em src/main/java/br/com/medclinic/presentation. Não há API de agenda, prontuário clínico ou edição de eventos.

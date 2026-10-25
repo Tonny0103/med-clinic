@@ -72,6 +72,7 @@ public class PatientController {
         model.addAttribute("p", view.patient());
         model.addAttribute("originalChart", view.originalChart());
         model.addAttribute("history", view.history());
+        model.addAttribute("consentStatuses", br.com.medclinic.application.ConsentService.statuses(view.patient()));
         model.addAttribute("reference", reference == null ? patients.today() : reference);
         model.addAttribute(
                 "effectivePreference",
@@ -91,6 +92,9 @@ public class PatientController {
         model.addAttribute("editing", true);
         model.addAttribute("patientId", id);
         model.addAttribute("errors", Map.of());
+        model.addAttribute(
+                "evidenceOptions",
+                p.attachments.stream().filter(a -> a.administrative()).toList());
         return "patient-form";
     }
 
@@ -110,6 +114,11 @@ public class PatientController {
             model.addAttribute("errors", Map.of(error.field, error.getMessage()));
             model.addAttribute("editing", true);
             model.addAttribute("patientId", id);
+            model.addAttribute(
+                    "evidenceOptions",
+                    patients.read(WebSupport.actor(auth), id).patient().attachments.stream()
+                            .filter(a -> a.administrative())
+                            .toList());
             return "patient-form";
         }
     }

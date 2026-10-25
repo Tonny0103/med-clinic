@@ -159,22 +159,32 @@ public class PatientService {
                     store.find(id).orElseThrow(() -> new RuleViolation("patient", "Paciente não encontrado."));
             Patient p = canonical(id);
             event(actor, "CONSULTAR", p.id, "SUCESSO", "", "", id.equals(p.id) ? "" : id.toString());
-            VisitHistory.Result history;
-            try {
-                history = visits.query(p.id);
-                if (history.state() == VisitHistory.State.DISPONIVEL) {
-                    var entries = history.entries().stream()
-                            .sorted(java.util.Comparator.comparing(VisitHistory.Entry::date)
-                                    .reversed())
-                            .toList();
-                    history = new VisitHistory.Result(
-                            entries.isEmpty() ? VisitHistory.State.VAZIO : VisitHistory.State.DISPONIVEL, entries);
-                }
-            } catch (RuntimeException unavailable) {
-                history = new VisitHistory.Result(VisitHistory.State.FALHA, java.util.List.of());
-            }
-            return new PatientView(p, id.equals(p.id) ? "" : requested.chart, history);
+            return new PatientView(p, id.equals(p.id) ? "" : requested.chart, history(p));
         });
+    }
+
+    private VisitHistory.Result history(Patient patient) {
+        try {
+            java.util.Set<UUID> identities = new java.util.LinkedHashSet<>();
+            identities.add(patient.id);
+            patient.merges.forEach(merge -> identities.add(merge.sourceId()));
+            var results = identities.stream().map(visits::query).toList();
+            if (results.stream().allMatch(r -> r.state() == VisitHistory.State.NAO_CONFIGURADO))
+                return new VisitHistory.Result(VisitHistory.State.NAO_CONFIGURADO, java.util.List.of());
+            if (results.stream()
+                    .anyMatch(r ->
+                            r.state() == VisitHistory.State.FALHA || r.state() == VisitHistory.State.NAO_CONFIGURADO))
+                return new VisitHistory.Result(VisitHistory.State.FALHA, java.util.List.of());
+            var entries = results.stream()
+                    .flatMap(r -> r.entries().stream())
+                    .sorted(java.util.Comparator.comparing(VisitHistory.Entry::date)
+                            .reversed())
+                    .toList();
+            return new VisitHistory.Result(
+                    entries.isEmpty() ? VisitHistory.State.VAZIO : VisitHistory.State.DISPONIVEL, entries);
+        } catch (RuntimeException unavailable) {
+            return new VisitHistory.Result(VisitHistory.State.FALHA, java.util.List.of());
+        }
     }
 
     public record PatientView(Patient patient, String originalChart, VisitHistory.Result history) {}
@@ -191,12 +201,16 @@ public class PatientService {
                         .contains(br.com.medclinic.domain.Rules.digits(query).length());
         return store.transaction(() -> {
             var hits = new java.util.LinkedHashMap<UUID, SearchHit>();
+            String identifier = br.com.medclinic.domain.Rules.digits(query);
+            UUID cpfOwner = exact && identifier.length() == 11
+                    ? store.findByCpf(identifier).orElse(null)
+                    : null;
             if (q.length() >= 2) {
                 for (Patient candidate : store.all()) {
                     boolean match = exact
-                            ? candidate.chart.equals(br.com.medclinic.domain.Rules.digits(query))
-                                    || (!candidate.cpf.isBlank()
-                                            && candidate.cpf.equals(br.com.medclinic.domain.Rules.digits(query)))
+                            ? identifier.length() == 12
+                                    ? candidate.chart.equals(identifier)
+                                    : candidate.id.equals(cpfOwner)
                             : candidate.mergedInto == null
                                     && br.com.medclinic.domain.Rules.normalize(candidate.name)
                                             .contains(q)

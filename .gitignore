@@ -60,6 +60,7 @@ application-local.yaml
 
 # Local database files
 data/
+backups/
 *.mv.db
 *.trace.db
 *.h2.db

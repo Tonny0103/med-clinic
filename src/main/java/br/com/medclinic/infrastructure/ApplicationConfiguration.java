@@ -14,6 +14,22 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Configuration
 public class ApplicationConfiguration {
     @Bean
+    br.com.medclinic.application.AuditService audit(PatientService patients) {
+        return new br.com.medclinic.application.AuditService(patients);
+    }
+
+    @Bean
+    br.com.medclinic.application.MergeService merges(PatientService patients) {
+        return new br.com.medclinic.application.MergeService(patients);
+    }
+
+    @Bean
+    br.com.medclinic.application.ConsentService consents(
+            PatientService patients, br.com.medclinic.application.AttachmentService attachments) {
+        return new br.com.medclinic.application.ConsentService(patients, attachments);
+    }
+
+    @Bean
     br.com.medclinic.application.FileScanner scanner(
             @Value("${clinic.clam-host}") String host, @Value("${clinic.clam-port}") int port) {
         return new ClamAvScanner(host, port);

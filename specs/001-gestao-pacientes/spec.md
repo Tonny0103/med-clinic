@@ -1,12 +1,12 @@
 # Feature Specification: Cadastro e Gestão de Pacientes
 
-**Feature Branch**: `main` — sem criação de branch; nenhum hook configurado.
+**Feature Branch**: `dev` — implementação na branch existente; nenhum hook configurado.
 
 **Feature Directory**: `specs/001-gestao-pacientes`
 
 **Created**: 2026-10-23
 
-**Status**: Pronto para implementação do MVP demonstrativo; escopo simplificado pelo usuário em 2026-10-24.
+**Status**: Implementado e verificado como MVP demonstrativo; escopo simplificado pelo usuário em 2026-10-24. Evidências em docs/validation/001-gestao-pacientes/verification.md.
 
 **Input**: Cadastro administrativo único para recepção, com identificação, contatos, responsáveis, convênios, busca, prevenção e mesclagem de duplicidades, documentos, resumo de atendimentos, consentimentos, inativação, reativação e auditoria. Proteção de dados pessoais e sensíveis e acesso por perfil.
 
@@ -241,7 +241,7 @@ Como gerente, quero saber quem criou, alterou e consultou cadastros sem expor co
 
 ### Quality & Privacy Requirements
 
-- **QR-001**: Busca e exibição de resultados DEVEM cumprir SC-001 em carga representativa. Falhas não contam como respostas rápidas atendidas. Os limites de desempenho da constituição permanecem aplicáveis e serão detalhados no plano, sem substituir a meta percebida pelo usuário.
+- **QR-001**: Conferir a busca e a exibição em dezenas de registros fictícios, conforme SC-001 e constituição 2.0.0. A demonstração não exige carga automatizada, SLO ou ambiente separado.
 - **QR-002**: Jornadas DEVEM atender aos critérios aplicáveis de WCAG 2.1 A e AA, com teclado, leitor de tela, foco visível, nomes acessíveis, contraste e erros associados aos campos, sem depender só de cor nem apagar entradas válidas.
 - **QR-003**: Proteger dados e arquivos contra acesso indevido no armazenamento, envio e consulta. Segredos e dados reais de pacientes não podem compor exemplos, demonstrações, registros técnicos ou materiais públicos.
 - **QR-004**: Inativação não equivale à eliminação nem define retenção ilimitada. Antes de dados reais, a clínica deve aprovar finalidades, fundamentos de tratamento, termos, evidências, retenção e procedimento externo de solicitações dos titulares. Não apagar automaticamente dados por revogação; eventual eliminação legalmente cabível exige procedimento específico, fora da operação cadastral deste módulo.

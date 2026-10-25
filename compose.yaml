@@ -1,0 +1,60 @@
+name: med-clinic
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: medclinic
+      POSTGRES_DB: medclinic
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Gere .env com ops/init-env.sh ou ops/New-DemoEnvironment.ps1}
+    command: ["postgres", "-c", "log_statement=none", "-c", "log_min_error_statement=panic", "-c", "log_error_verbosity=terse"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medclinic -d medclinic"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  clamav:
+    image: clamav/clamav:stable-debian13-slim
+    restart: unless-stopped
+    volumes:
+      - clamav_data:/var/lib/clamav
+    mem_limit: 4g
+    healthcheck:
+      test: ["CMD-SHELL", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      start_period: 360s
+      retries: 10
+  app:
+    build: .
+    image: med-clinic:demo
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clamav:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/medclinic
+      DB_USER: medclinic
+      DB_PASSWORD: ${DB_PASSWORD:?Gere .env}
+      RECEPTION_PASSWORD: ${RECEPTION_PASSWORD:?Gere .env}
+      MANAGER_PASSWORD: ${MANAGER_PASSWORD:?Gere .env}
+      DOCTOR_PASSWORD: ${DOCTOR_PASSWORD:?Gere .env}
+      CLINIC_ZONE: ${CLINIC_ZONE:-America/Cuiaba}
+      CLINIC_FILES: /app/data/files
+      CLAM_HOST: clamav
+      CLAM_PORT: 3310
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-demo}
+    volumes:
+      - clinic_files:/app/data
+    mem_limit: 1g
+volumes:
+  postgres_data:
+  clinic_files:
+  clamav_data:

@@ -17,8 +17,383 @@ import org.springframework.test.context.DynamicPropertySource;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc(
+        print = org.springframework.boot.webmvc.test.autoconfigure.MockMvcPrint.NONE)
 class FoundationTest {
+    private static final String RECEPTION_SECRET = UUID.randomUUID().toString();
+    private static final String MANAGER_SECRET = UUID.randomUUID().toString();
+    private static final String DOCTOR_SECRET = UUID.randomUUID().toString();
+
+    @Test
+    void authenticatesAllThreeConfiguredUsersAndRejectsWrongPassword() throws Exception {
+        for (var login : java.util.List.of(
+                new String[] {"recepcao", RECEPTION_SECRET, "RECEPCAO"},
+                new String[] {"gerente", MANAGER_SECRET, "GERENTE"},
+                new String[] {"medico", DOCTOR_SECRET, "MEDICO"})) {
+            web.perform(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin(
+                                    "/login")
+                            .user(login[0])
+                            .password(login[1]))
+                    .andExpect(
+                            org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers
+                                    .authenticated()
+                                    .withRoles(login[2]))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl(
+                            "/pacientes"));
+        }
+        web.perform(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin(
+                                "/login")
+                        .user("recepcao")
+                        .password(UUID.randomUUID().toString()))
+                .andExpect(
+                        org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers
+                                .unauthenticated())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl(
+                        "/login?error"));
+    }
+
+    @Autowired
+    br.com.medclinic.application.AuditService audit;
+
+    @Test
+    void auditQueryIsManagerOnlyFilteredAndAuditsItselfOnce() throws Exception {
+        String uniqueActor = "usuario-teste-" + UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        store.audit(new ClinicStore.Event(
+                eventId, Instant.now(), uniqueActor, "RECEPCAO", "EVENTO_TESTE", null, "SUCESSO", "phone", "", ""));
+        long before = store.events().stream()
+                .filter(e -> e.operation().equals("CONSULTAR_AUDITORIA")
+                        && e.outcome().equals("SUCESSO"))
+                .count();
+        var report = audit.query(
+                new br.com.medclinic.application.Actor("gerente", "GERENTE"),
+                java.util.Map.of("actorFilter", uniqueActor),
+                0);
+        assertThat(report.page().items())
+                .hasSize(1)
+                .extracting(ClinicStore.Event::id)
+                .containsExactly(eventId);
+        assertThat(store.events().stream()
+                        .filter(e -> e.operation().equals("CONSULTAR_AUDITORIA")
+                                && e.outcome().equals("SUCESSO"))
+                        .count())
+                .isEqualTo(before + 1);
+        assertThatThrownBy(() -> audit.query(
+                        new br.com.medclinic.application.Actor("recepcao", "RECEPCAO"), java.util.Map.of(), 0))
+                .isInstanceOf(br.com.medclinic.application.AccessDenied.class);
+        web.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/auditoria")
+                                .param("actorFilter", uniqueActor)
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("gerente")
+                                        .roles("GERENTE")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .string(org.hamcrest.Matchers.containsString(uniqueActor)));
+        web.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/auditoria")
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("medico")
+                                        .roles("MEDICO")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .isForbidden());
+        assertThat(store.events().toString()).doesNotContain("00000000353", "Pessoa fictícia de cadastro");
+    }
+
+    @Autowired
+    br.com.medclinic.application.MergeService merges;
+
+    @Test
+    void mergeKeepsAliasesEvidenceAndRevocationAndIsIdempotent() throws Exception {
+        Patient source = mergingPatient("SOURCE"), destination = mergingPatient("DEST");
+        source.cpf = "00000001082";
+        store.transaction(() -> {
+            store.save(source, -1);
+            store.save(destination, -1);
+            return null;
+        });
+        var manager = new br.com.medclinic.application.Actor("gerente", "GERENTE");
+        byte[] png = PrivateFileTest.png();
+        attachments.upload(
+                manager, source.id, 1, UUID.randomUUID(), java.util.Map.of("category", "IDENTIDADE"), png, "image/png");
+        attachments.upload(
+                manager,
+                destination.id,
+                1,
+                UUID.randomUUID(),
+                java.util.Map.of("category", "IDENTIDADE"),
+                png,
+                "image/png");
+        UUID sourceProof =
+                store.find(source.id).orElseThrow().attachments.getFirst().id();
+        UUID destinationProof =
+                store.find(destination.id).orElseThrow().attachments.getFirst().id();
+        var form = new java.util.HashMap<>(java.util.Map.of(
+                "purpose",
+                "IMAGEM",
+                "termVersion",
+                "DEMO-v1",
+                "manifestedOn",
+                patients.today().toString(),
+                "declarant",
+                "Paciente fictício",
+                "evidenceId",
+                sourceProof.toString()));
+        consents.record(manager, source.id, 2, UUID.randomUUID(), form, true, null, null);
+        form.put("evidenceId", destinationProof.toString());
+        form.put("decision", "CONCEDIDO");
+        consents.record(manager, destination.id, 2, UUID.randomUUID(), form, false, null, null);
+        web.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/mesclagem")
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("gerente")
+                                        .roles("GERENTE")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .isOk());
+        web.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/mesclagem/comparar")
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("gerente")
+                                        .roles("GERENTE"))
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.csrf())
+                                .param("sourceId", source.id.toString())
+                                .param("destinationId", destination.id.toString()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .isOk());
+        web.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/mesclagem/previa")
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("gerente")
+                                        .roles("GERENTE"))
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.csrf())
+                                .param("sourceId", source.id.toString())
+                                .param("destinationId", destination.id.toString())
+                                .param("sourceVersion", "3")
+                                .param("destinationVersion", "3")
+                                .param("sourceEvidenceId", sourceProof.toString())
+                                .param("destinationEvidenceId", destinationProof.toString())
+                                .param("reason", "Identidades fictícias conferidas"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .string(org.hamcrest.Matchers.containsString("REVOGADO")));
+        var preview = merges.preview(
+                manager,
+                source.id,
+                destination.id,
+                3,
+                3,
+                sourceProof,
+                destinationProof,
+                java.util.Map.of(),
+                "Mesma pessoa, provas fictícias conferidas");
+        UUID token = UUID.randomUUID();
+        web.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/mesclagem/confirmar")
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("gerente")
+                                        .roles("GERENTE"))
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.csrf())
+                                .param("previewId", preview.id().toString())
+                                .param("token", token.toString())
+                                .param("confirmed", "sim"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl(
+                        "/pacientes/" + destination.id + "?sucesso"));
+        assertThat(merges.confirm(manager, preview.id(), token, true)).isEqualTo(destination.id);
+        Patient merged = store.find(destination.id).orElseThrow();
+        assertThat(merged.attachments).hasSize(2);
+        assertThat(merged.consents).hasSize(2);
+        assertThat(merged.chart).isEqualTo(destination.chart);
+        assertThat(br.com.medclinic.application.ConsentService.status(merged, "IMAGEM"))
+                .isEqualTo("REVOGADO");
+        assertThat(store.find(source.id).orElseThrow().status).isEqualTo("MESCLADO");
+        assertThat(patients.read(manager, source.id).originalChart()).isEqualTo(source.chart);
+        assertThat(patients.read(manager, source.id).patient().id).isEqualTo(destination.id);
+        var controlledHistory = new br.com.medclinic.application.PatientService(
+                store,
+                java.time.Clock.system(java.time.ZoneId.of("America/Cuiaba")),
+                id -> new br.com.medclinic.application.VisitHistory.Result(
+                        br.com.medclinic.application.VisitHistory.State.DISPONIVEL,
+                        java.util.List.of(new br.com.medclinic.application.VisitHistory.Entry(
+                                patients.today(), "Profissional fictício", "Consulta", id))));
+        assertThat(controlledHistory.read(manager, source.id).history().entries())
+                .hasSize(2)
+                .extracting(br.com.medclinic.application.VisitHistory.Entry::origin)
+                .containsExactlyInAnyOrder(source.id, destination.id);
+        assertThatThrownBy(() -> patients.changeStatus(
+                        manager,
+                        source.id,
+                        4,
+                        UUID.randomUUID(),
+                        java.util.Map.of("target", "ATIVO", "reason", "Tentativa")))
+                .isInstanceOf(RuleViolation.class);
+        var corrected = br.com.medclinic.application.PatientService.profileFields(merged);
+        corrected.put("cpf", "00000001163");
+        corrected.put("reason", "Correção documental fictícia");
+        corrected.put("evidenceId", destinationProof.toString());
+        patients.edit(manager, destination.id, merged.version, UUID.randomUUID(), corrected);
+        assertThat(patients.search(manager, "00000001082", "TODOS", 0).total()).isZero();
+        var unrelated = br.com.medclinic.application.PatientService.profileFields(merged);
+        unrelated.put("name", "Outra pessoa fictícia");
+        unrelated.put("birthdate", "1980-05-01");
+        unrelated.put("cpf", "00000001082");
+        unrelated.put("nationality", "BR");
+        java.util.List.of(
+                        "alternativeType",
+                        "alternativeNumber",
+                        "alternativeCountry",
+                        "alternativeIssuer",
+                        "alternativeReason")
+                .forEach(key -> unrelated.put(key, ""));
+        UUID unrelatedId = patients.create(manager, UUID.randomUUID(), unrelated);
+        assertThat(patients.search(manager, "00000001082", "TODOS", 0)
+                        .items()
+                        .getFirst()
+                        .id())
+                .isEqualTo(unrelatedId);
+    }
+
+    @Test
+    void invalidatingProofMakesMergePreviewStaleWithoutPartialConsolidation() throws Exception {
+        Patient source = mergingPatient("STALE-SOURCE"), destination = mergingPatient("STALE-DEST");
+        store.transaction(() -> {
+            store.save(source, -1);
+            store.save(destination, -1);
+            return null;
+        });
+        var manager = new br.com.medclinic.application.Actor("gerente", "GERENTE");
+        byte[] png = PrivateFileTest.png();
+        attachments.upload(
+                manager, source.id, 1, UUID.randomUUID(), java.util.Map.of("category", "IDENTIDADE"), png, "image/png");
+        attachments.upload(
+                manager,
+                destination.id,
+                1,
+                UUID.randomUUID(),
+                java.util.Map.of("category", "IDENTIDADE"),
+                png,
+                "image/png");
+        UUID sourceProof =
+                store.find(source.id).orElseThrow().attachments.getFirst().id();
+        UUID destinationProof =
+                store.find(destination.id).orElseThrow().attachments.getFirst().id();
+        var preview = merges.preview(
+                manager,
+                source.id,
+                destination.id,
+                2,
+                2,
+                sourceProof,
+                destinationProof,
+                java.util.Map.of(),
+                "Provas conferidas na demonstração");
+        attachments.invalidate(
+                manager,
+                source.id,
+                2,
+                UUID.randomUUID(),
+                java.util.Map.of("attachmentId", sourceProof.toString(), "reason", "Vínculo corrigido"));
+        assertThatThrownBy(() -> merges.confirm(manager, preview.id(), UUID.randomUUID(), true))
+                .isInstanceOf(RuleViolation.class);
+        assertThat(store.find(source.id).orElseThrow().status).isEqualTo("ATIVO");
+        assertThat(store.find(destination.id).orElseThrow().attachments).hasSize(1);
+        assertThat(store.find(destination.id).orElseThrow().merges).isEmpty();
+    }
+
+    private Patient mergingPatient(String document) {
+        Patient p = fixture();
+        p.name = "Paciente fictício para mesclagem";
+        p.cpf = "";
+        p.nationality = "AR";
+        p.alternativeType = "PASSAPORTE";
+        p.alternativeNumber = document;
+        p.alternativeCountry = "AR";
+        p.alternativeIssuer = "DEMO";
+        p.alternativeReason = "Sem CPF";
+        p.phone = "+55 65 90000-0000";
+        p.address = "Rua fictícia, 10";
+        return p;
+    }
+
+    @Autowired
+    br.com.medclinic.application.ConsentService consents;
+
+    @Test
+    void revocationOfInactivePatientCanAtomicallyAddEvidenceOnlyInThatFlow() throws Exception {
+        Patient p = fixture();
+        p.cpf = "00000000949";
+        store.transaction(() -> {
+            store.save(p, -1);
+            return null;
+        });
+        var actor = new br.com.medclinic.application.Actor("recepcao", "RECEPCAO");
+        byte[] bytes = PrivateFileTest.png();
+        attachments.upload(
+                actor, p.id, 1, UUID.randomUUID(), java.util.Map.of("category", "IDENTIDADE"), bytes, "image/png");
+        UUID proof = store.find(p.id).orElseThrow().attachments.getFirst().id();
+        var form = new java.util.HashMap<>(java.util.Map.of(
+                "purpose",
+                "PROTECAO_DADOS",
+                "termVersion",
+                "DEMO-v1",
+                "decision",
+                "CONCEDIDO",
+                "manifestedOn",
+                patients.today().toString(),
+                "declarant",
+                "Paciente fictício",
+                "evidenceId",
+                proof.toString()));
+        consents.record(actor, p.id, 2, UUID.randomUUID(), form, false, null, null);
+        patients.changeStatus(
+                actor, p.id, 3, UUID.randomUUID(), java.util.Map.of("target", "INATIVO", "reason", "Pausa"));
+        web.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart(
+                                        "/pacientes/" + p.id + "/revogacoes")
+                                .file(new org.springframework.mock.web.MockMultipartFile(
+                                        "file", "evidencia-ficticia.png", "image/png", bytes))
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("recepcao")
+                                        .roles("RECEPCAO"))
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.csrf())
+                                .param("version", "4")
+                                .param("token", UUID.randomUUID().toString())
+                                .param("purpose", "PROTECAO_DADOS")
+                                .param("termVersion", "DEMO-v1")
+                                .param("manifestedOn", patients.today().toString())
+                                .param("declarant", "Paciente fictício")
+                                .param("evidenceId", ""))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                        .is3xxRedirection());
+        Patient revoked = store.find(p.id).orElseThrow();
+        assertThat(revoked.status).isEqualTo("INATIVO");
+        assertThat(revoked.consents).hasSize(2);
+        assertThat(revoked.attachments).hasSize(2);
+        assertThat(revoked.attachments.getLast().category()).isEqualTo("EVIDENCIA_REVOGACAO");
+        assertThat(br.com.medclinic.application.ConsentService.status(revoked, "PROTECAO_DADOS"))
+                .isEqualTo("REVOGADO");
+        attachments.invalidate(
+                new br.com.medclinic.application.Actor("gerente", "GERENTE"),
+                p.id,
+                5,
+                UUID.randomUUID(),
+                java.util.Map.of(
+                        "attachmentId",
+                        revoked.attachments.getLast().id().toString(),
+                        "reason",
+                        "Teste de invalidação"));
+        assertThat(br.com.medclinic.application.ConsentService.status(
+                        store.find(p.id).orElseThrow(), "PROTECAO_DADOS"))
+                .isEqualTo("REVOGADO");
+    }
+
     @org.springframework.test.context.bean.override.mockito.MockitoBean
     br.com.medclinic.application.FileScanner scanner;
 
@@ -173,9 +548,9 @@ class FoundationTest {
 
     @DynamicPropertySource
     static void passwords(DynamicPropertyRegistry registry) {
-        registry.add("clinic.reception-password", () -> UUID.randomUUID().toString());
-        registry.add("clinic.manager-password", () -> UUID.randomUUID().toString());
-        registry.add("clinic.doctor-password", () -> UUID.randomUUID().toString());
+        registry.add("clinic.reception-password", () -> RECEPTION_SECRET);
+        registry.add("clinic.manager-password", () -> MANAGER_SECRET);
+        registry.add("clinic.doctor-password", () -> DOCTOR_SECRET);
     }
 
     @Test
