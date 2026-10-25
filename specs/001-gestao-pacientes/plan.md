@@ -20,5 +20,5 @@ Poucos testes essenciais: regras de CPF/menor/suspeita/convênio e teste de inte
 Uma VM Oracle A1 candidata, com aplicação, PostgreSQL e ClamAV via Compose; arquivos e banco em volumes privados. Imagens compatíveis com ARM64; build local também em amd64. Desenvolvimento sem Docker pode usar H2 e scanner real externo; scanner indisponível bloqueia envio. Termos e dados são fictícios. Não provisionar conta Oracle automaticamente.
 
 ## Sequência
-T001 alinhamento → T002 scaffold → T003 regras → T004 persistência/segurança → T005 cadastro → T006 busca → T007 manutenção → T008 vínculos → T009 consentimentos → T010 arquivos → T011 mesclagem → T012 auditoria → T013 implantação e validação final. Cada tarefa produz um commit.
+T001 alinhamento → T002 scaffold → T003 regras → T004 persistência/segurança → T005 cadastro → T006 busca → T007 manutenção → T008 vínculos → T010 arquivos → T009 consentimentos → T011 mesclagem → T012 auditoria → T013 implantação e validação final. Arquivos antecedem consentimentos para fornecer a preparação privada de evidências. Cada tarefa produz um commit.
 

@@ -1,10 +1,13 @@
-# Verificação rápida do MVP
+# Roteiro curto de apresentação
 
-Os comandos e variáveis executáveis estão no README da raiz, atualizado com o scaffold.
+1. Siga o README para gerar .env e iniciar. Para todos os fluxos de arquivos, use docker compose up -d --build e confirme app/postgres/clamav saudáveis. Abra http://localhost:8080 e consulte as senhas no .env local.
+2. Entre como recepcao. Busque “Demonstração”: 24 pacientes fictícios, em páginas de 20 e 4. Abra uma ficha e confira “Histórico ainda não disponível”.
+3. Cadastre adulto fictício com telefone/endereço e CPF válido que ainda não esteja na base. Tente repetir o documento e omitir contato. Menor precisa de responsável; menor ou estrangeiro sem CPF precisa de documento alternativo completo. E-mail é opcional.
+4. Envie imagem/PDF fictício como identidade. Edite dados; para corrigir CPF/documento já registrado, selecione a comprovação e informe motivo. Inative e reative com motivo, conferindo o mesmo prontuário.
+5. Acrescente/substitua responsável, atualize emergência e registre dois convênios. Escolha preferência. Renove um segmento, consulte data anterior e confira validade/vigência preservadas.
+6. Registre aceite ou recusa por finalidade/versão com prova. Inative e registre revogação com nova prova no próprio formulário; a ficha deve continuar inativa. Upload avulso permanece bloqueado.
+7. Em ativo, envie exame fictício. Observe apenas categoria, data, autor e referência neutra. Nenhum perfil poderá baixá-lo; médico consegue ler administração e documentos administrativos, com todas as escritas bloqueadas.
+8. Como gerente, invalide vínculo com motivo. Prepare mesclagem de dois cadastros da mesma pessoa, com nome/nascimento coincidentes, CPFs não divergentes e prova administrativa válida em cada um. Resolva diferenças, revise a prévia e confirme. Ambos os prontuários levam ao destino; decisões e origens permanecem.
+9. Filtre /auditoria como gerente. Recepção e médico são recusados. Eventos registram também buscas vazias e acessos negados, sem CPF, contatos, texto bruto de pesquisa ou conteúdo de arquivo.
 
-Usar somente dados fictícios, dezenas de pacientes e três perfis. Executar testes essenciais com Maven Wrapper. Para demonstração, subir aplicação, PostgreSQL e ClamAV; fazer login como recepção, gerente e médico.
-
-Roteiro: cadastrar adulto e menor sem CPF; rejeitar CPF duplicado e cadastro incompleto; buscar nome/CPF/prontuário e confirmar histórico ainda não disponível; editar com versão, inativar e reativar; manter responsável, emergência e dois convênios; consultar cobertura em data passada; registrar aceite/recusa/revogação, inclusive nova evidência de inativo pelo próprio fluxo; enviar PDF administrativo e arquivo clínico fictício, negar leitura clínica em todos os perfis; invalidar como gerente; pré-visualizar/confirmar mesclagem com duas provas e conferir aliases/decisões; filtrar auditoria como gerente e negar aos outros perfis.
-
-Não há teste de carga, certificação de acessibilidade ou pesquisa de tempo de cadastro obrigatórios. Registrar somente verificações realmente executadas, com limitações, em docs/validation/001-gestao-pacientes/.
-
+Use apenas dados e documentos fictícios e mantenha a base nas dezenas. Não há carga, aprovação formal, pesquisa com secretárias ou certificação obrigatória. Evidência efetivamente executada: docs/validation/001-gestao-pacientes/verification.md. Hospedagem/backup: docs/oracle-demo.md.

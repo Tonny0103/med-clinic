@@ -30,6 +30,10 @@ public class ConsentController {
             RedirectAttributes flash)
             throws IOException {
         try {
+            boolean selected = file != null
+                    && (file.getSize() > 0
+                            || file.getOriginalFilename() != null
+                                    && !file.getOriginalFilename().isBlank());
             consents.record(
                     WebSupport.actor(auth),
                     id,
@@ -37,7 +41,7 @@ public class ConsentController {
                     PatientController.token(form),
                     form,
                     request.getRequestURI().endsWith("/revogacoes"),
-                    file == null || file.isEmpty() ? null : file.getBytes(),
+                    selected ? file.getBytes() : null,
                     file == null ? null : file.getContentType());
             return "redirect:/pacientes/" + id + "?sucesso";
         } catch (RuleViolation error) {

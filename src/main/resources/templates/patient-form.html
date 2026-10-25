@@ -3,6 +3,7 @@
 <body><header th:replace="~{fragments :: header}"></header><main id="conteudo">
 <a href="/pacientes">← Pacientes</a><h1 th:text="${editing ? 'Editar cadastro' : 'Novo paciente'}"></h1><p>Campos com * são obrigatórios. Use somente dados fictícios nesta demonstração.</p>
 <div class="alert" role="alert" tabindex="-1" th:if="${!errors.isEmpty()}"><strong>Revise os dados antes de salvar.</strong><ul><li th:each="error : ${errors}"><a th:href="${'#' + error.key}" th:text="${error.value}"></a></li></ul></div>
+<p th:if="${editing and errors.containsKey('version')}"><a th:href="@{/pacientes/{id}/editar(id=${patientId})}">Abrir versão atual para revisar</a></p>
 <form th:action="${editing ? '/pacientes/' + patientId + '/editar' : '/pacientes'}" method="post" class="panel">
 <input type="hidden" name="token" th:value="${form['token'] ?: token}"><input th:if="${editing}" type="hidden" name="version" th:value="${form['version']}">
 <section class="card"><h2>Identificação</h2><div class="grid">
@@ -32,5 +33,5 @@
 </div></section>
 <section class="card"><h2>Revisão</h2><p>Se houver alerta de possível duplicidade, confira os cadastros e justifique por que são pessoas distintas. Na correção de documento existente, informe motivo e prova administrativa válida.</p>
 <div th:replace="~{fragments :: field('reason', 'Justificativa (sem CPF ou dados de contato)', 'text', false)}"></div>
-<div th:if="${editing}"><div th:replace="~{fragments :: field('evidenceId', 'ID da prova administrativa, se corrigir documento', 'text', false)}"></div></div>
+<div th:if="${editing}"><label for="evidenceId">Comprovação para corrigir CPF ou documento</label><select id="evidenceId" name="evidenceId" th:attr="aria-invalid=${errors.containsKey('evidenceId')},aria-describedby=${errors.containsKey('evidenceId') ? 'evidenceId-error' : null}"><option value="">Selecione se estiver corrigindo um documento</option><option th:each="a : ${evidenceOptions}" th:value="${a.id()}" th:selected="${form['evidenceId'] == a.id().toString()}" th:text="${a.category() + ' · ' + a.createdAt() + ' · ' + a.author()}"></option></select><p id="evidenceId-error" class="field-error" th:if="${errors.containsKey('evidenceId')}" th:text="${errors['evidenceId']}"></p><p class="muted">Use uma prova administrativa válida já anexada a esta ficha.</p></div>
 </section><div class="actions"><button>Salvar cadastro</button><a href="/pacientes">Cancelar</a></div></form></main></body></html>

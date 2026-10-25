@@ -66,6 +66,10 @@ public class JdbcClinicStore implements ClinicStore {
 
     @Override
     public void save(Patient p, long expectedVersion) {
+        List<String> previousKeys = expectedVersion < 0
+                ? List.of()
+                : find(p.id).map(this::identityKeys).orElse(List.of());
+        List<String> nextKeys = identityKeys(p);
         p.version = expectedVersion < 0 ? 1 : expectedVersion + 1;
         if (expectedVersion < 0) {
             jdbc.update(
@@ -91,12 +95,24 @@ public class JdbcClinicStore implements ClinicStore {
                     expectedVersion);
             if (changed != 1) throw new RuleViolation("version", "A ficha foi alterada. Reabra e revise os dados.");
         }
-        jdbc.update("delete from identities where patient_id = ?", p.id.toString());
-        for (String key : identityKeys(p)) {
+        for (String oldKey : previousKeys) {
+            if (!nextKeys.contains(oldKey)) {
+                List<String> owners = jdbc.queryForList(
+                        "select patient_id from identities where document_key = ?", String.class, oldKey);
+                if (!owners.isEmpty()
+                        && canonicalId(UUID.fromString(owners.getFirst())).equals(canonicalId(p.id)))
+                    jdbc.update("delete from identities where document_key = ?", oldKey);
+            }
+        }
+        for (String key : nextKeys) {
             List<String> owners =
                     jdbc.queryForList("select patient_id from identities where document_key = ?", String.class, key);
             if (owners.isEmpty()) {
-                jdbc.update("insert into identities(document_key, patient_id) values(?,?)", key, p.id.toString());
+                try {
+                    jdbc.update("insert into identities(document_key, patient_id) values(?,?)", key, p.id.toString());
+                } catch (org.springframework.dao.DuplicateKeyException conflict) {
+                    throw new RuleViolation("cpf", "Documento já associado a outro cadastro.");
+                }
             } else if (!canonicalId(UUID.fromString(owners.getFirst())).equals(canonicalId(p.id))) {
                 throw new RuleViolation(
                         "cpf", "Documento já associado a outro cadastro, inclusive inativo ou mesclado.");
@@ -109,6 +125,15 @@ public class JdbcClinicStore implements ClinicStore {
         int hops = 0;
         while (p.mergedInto != null && hops++ < 100) p = find(p.mergedInto).orElseThrow();
         return p.id;
+    }
+
+    @Override
+    public Optional<UUID> findByCpf(String cpf) {
+        return jdbc
+                .queryForList("select patient_id from identities where document_key = ?", String.class, "CPF:" + cpf)
+                .stream()
+                .map(UUID::fromString)
+                .findFirst();
     }
 
     private List<String> identityKeys(Patient p) {

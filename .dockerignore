@@ -8,5 +8,9 @@ data/
 .env*
 !.env.example
 secrets/
+.aws/
+.idea/
+.vscode/
+backups/
 *.pem
 *.key

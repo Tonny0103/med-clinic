@@ -11,6 +11,17 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 
 @ControllerAdvice
 public class Errors {
+    @ExceptionHandler({
+        IllegalArgumentException.class,
+        org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+        org.springframework.web.bind.MissingServletRequestParameterException.class
+    })
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    String badRequest(Exception error, Model model) {
+        model.addAttribute("message", "Dados de formulário inválidos. Reabra a página e confira os campos.");
+        return "error";
+    }
+
     @ExceptionHandler(AccessDenied.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     String denied(AccessDenied error, Model model) {

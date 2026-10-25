@@ -14,5 +14,5 @@ Escopo decidido pelo usuário em 2026-10-24: manter as oito histórias, implanta
 - [X] T010 [US6] Implementar upload privado inspecionado, metadados neutros, leitura administrativa e invalidação gerencial; negar conteúdo clínico.
 - [X] T011 [US7] Implementar prévia e confirmação transacional de mesclagem com duas provas, versões e proveniência.
 - [X] T012 [US8] Implementar consulta gerencial paginada de eventos com filtros e auditoria da própria consulta.
-- [ ] T013 Preparar Compose/Oracle, roteiro de demonstração e cópia de segurança; executar testes essenciais e registrar limites da validação.
+- [X] T013 Preparar Compose/Oracle, roteiro de demonstração e cópia de segurança; executar testes essenciais e registrar limites da validação.
 

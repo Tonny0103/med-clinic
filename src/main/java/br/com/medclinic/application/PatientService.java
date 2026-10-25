@@ -201,12 +201,16 @@ public class PatientService {
                         .contains(br.com.medclinic.domain.Rules.digits(query).length());
         return store.transaction(() -> {
             var hits = new java.util.LinkedHashMap<UUID, SearchHit>();
+            String identifier = br.com.medclinic.domain.Rules.digits(query);
+            UUID cpfOwner = exact && identifier.length() == 11
+                    ? store.findByCpf(identifier).orElse(null)
+                    : null;
             if (q.length() >= 2) {
                 for (Patient candidate : store.all()) {
                     boolean match = exact
-                            ? candidate.chart.equals(br.com.medclinic.domain.Rules.digits(query))
-                                    || (!candidate.cpf.isBlank()
-                                            && candidate.cpf.equals(br.com.medclinic.domain.Rules.digits(query)))
+                            ? identifier.length() == 12
+                                    ? candidate.chart.equals(identifier)
+                                    : candidate.id.equals(cpfOwner)
                             : candidate.mergedInto == null
                                     && br.com.medclinic.domain.Rules.normalize(candidate.name)
                                             .contains(q)

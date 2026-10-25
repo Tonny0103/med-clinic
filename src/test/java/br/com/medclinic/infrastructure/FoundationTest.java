@@ -17,8 +17,41 @@ import org.springframework.test.context.DynamicPropertySource;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc(
+        print = org.springframework.boot.webmvc.test.autoconfigure.MockMvcPrint.NONE)
 class FoundationTest {
+    private static final String RECEPTION_SECRET = UUID.randomUUID().toString();
+    private static final String MANAGER_SECRET = UUID.randomUUID().toString();
+    private static final String DOCTOR_SECRET = UUID.randomUUID().toString();
+
+    @Test
+    void authenticatesAllThreeConfiguredUsersAndRejectsWrongPassword() throws Exception {
+        for (var login : java.util.List.of(
+                new String[] {"recepcao", RECEPTION_SECRET, "RECEPCAO"},
+                new String[] {"gerente", MANAGER_SECRET, "GERENTE"},
+                new String[] {"medico", DOCTOR_SECRET, "MEDICO"})) {
+            web.perform(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin(
+                                    "/login")
+                            .user(login[0])
+                            .password(login[1]))
+                    .andExpect(
+                            org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers
+                                    .authenticated()
+                                    .withRoles(login[2]))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl(
+                            "/pacientes"));
+        }
+        web.perform(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin(
+                                "/login")
+                        .user("recepcao")
+                        .password(UUID.randomUUID().toString()))
+                .andExpect(
+                        org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers
+                                .unauthenticated())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl(
+                        "/login?error"));
+    }
+
     @Autowired
     br.com.medclinic.application.AuditService audit;
 
@@ -74,6 +107,7 @@ class FoundationTest {
     @Test
     void mergeKeepsAliasesEvidenceAndRevocationAndIsIdempotent() throws Exception {
         Patient source = mergingPatient("SOURCE"), destination = mergingPatient("DEST");
+        source.cpf = "00000001082";
         store.transaction(() -> {
             store.save(source, -1);
             store.save(destination, -1);
@@ -199,6 +233,30 @@ class FoundationTest {
                         UUID.randomUUID(),
                         java.util.Map.of("target", "ATIVO", "reason", "Tentativa")))
                 .isInstanceOf(RuleViolation.class);
+        var corrected = br.com.medclinic.application.PatientService.profileFields(merged);
+        corrected.put("cpf", "00000001163");
+        corrected.put("reason", "Correção documental fictícia");
+        corrected.put("evidenceId", destinationProof.toString());
+        patients.edit(manager, destination.id, merged.version, UUID.randomUUID(), corrected);
+        assertThat(patients.search(manager, "00000001082", "TODOS", 0).total()).isZero();
+        var unrelated = br.com.medclinic.application.PatientService.profileFields(merged);
+        unrelated.put("name", "Outra pessoa fictícia");
+        unrelated.put("birthdate", "1980-05-01");
+        unrelated.put("cpf", "00000001082");
+        unrelated.put("nationality", "BR");
+        java.util.List.of(
+                        "alternativeType",
+                        "alternativeNumber",
+                        "alternativeCountry",
+                        "alternativeIssuer",
+                        "alternativeReason")
+                .forEach(key -> unrelated.put(key, ""));
+        UUID unrelatedId = patients.create(manager, UUID.randomUUID(), unrelated);
+        assertThat(patients.search(manager, "00000001082", "TODOS", 0)
+                        .items()
+                        .getFirst()
+                        .id())
+                .isEqualTo(unrelatedId);
     }
 
     @Test
@@ -490,9 +548,9 @@ class FoundationTest {
 
     @DynamicPropertySource
     static void passwords(DynamicPropertyRegistry registry) {
-        registry.add("clinic.reception-password", () -> UUID.randomUUID().toString());
-        registry.add("clinic.manager-password", () -> UUID.randomUUID().toString());
-        registry.add("clinic.doctor-password", () -> UUID.randomUUID().toString());
+        registry.add("clinic.reception-password", () -> RECEPTION_SECRET);
+        registry.add("clinic.manager-password", () -> MANAGER_SECRET);
+        registry.add("clinic.doctor-password", () -> DOCTOR_SECRET);
     }
 
     @Test

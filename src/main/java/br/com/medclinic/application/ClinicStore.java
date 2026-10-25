@@ -14,6 +14,8 @@ public interface ClinicStore {
 
     Optional<Patient> find(UUID id);
 
+    Optional<UUID> findByCpf(String normalizedCpf);
+
     void lock(List<UUID> ids);
 
     String nextChart();

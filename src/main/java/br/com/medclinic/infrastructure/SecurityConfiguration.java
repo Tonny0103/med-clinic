@@ -17,11 +17,16 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfiguration {
     @Bean
+    BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
     UserDetailsService users(
             @Value("${clinic.reception-password}") String reception,
             @Value("${clinic.manager-password}") String manager,
-            @Value("${clinic.doctor-password}") String doctor) {
-        var encoder = new BCryptPasswordEncoder();
+            @Value("${clinic.doctor-password}") String doctor,
+            BCryptPasswordEncoder encoder) {
         return new InMemoryUserDetailsManager(
                 User.withUsername("recepcao")
                         .password(encoder.encode(secret(reception, "RECEPTION_PASSWORD")))
@@ -71,7 +76,12 @@ public class SecurityConfiguration {
                             UUID.randomUUID(),
                             Instant.now(),
                             auth == null ? "ANONIMO" : auth.getName(),
-                            "HTTP",
+                            auth == null
+                                    ? "ANONIMO"
+                                    : auth.getAuthorities().stream()
+                                            .map(a -> a.getAuthority().replaceFirst("^ROLE_", ""))
+                                            .findFirst()
+                                            .orElse("SEM_PERFIL"),
                             "ACESSO_NEGADO",
                             null,
                             "NEGADO",
